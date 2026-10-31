@@ -184,132 +184,50 @@
       gap: 8px;
     }
 
-    .scale-row {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 4px;
-      background: var(--inset-bg);
-      padding: 5px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-    }
 
-    .format-row {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4px;
-      background: var(--inset-bg);
-      padding: 5px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-    }
 
-    .btn-option {
-      background: var(--btn-inactive-bg);
-      border: 1px solid transparent;
-      color: var(--text-faint);
-      padding: 10px 2px;
-      font-size: 12px;
-      font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s ease;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
 
-    .btn-option.active {
-      background: var(--accent-color);
-      color: #ffffff;
-      font-weight: 700;
-      border: 1px solid #66a0ff;
-      box-shadow: 0 2px 10px var(--accent-glow);
-      transform: scale(1.02);
-    }
 
-    /* ---- Custom size panel ---- */
-    .custom-panel {
-      margin-top: 8px;
-      border-top: 1px solid var(--border-color);
-      padding-top: 8px;
-    }
-
-    .custom-panel[hidden] { display: none; }
-
-    .mini-seg {
+    /* ---- Size / format dropdowns ---- */
+    .select-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      background: var(--inset-bg);
-      padding: 4px;
-      border-radius: 10px;
-      border: 1px solid var(--border-color);
-      margin-bottom: 8px;
-    }
-
-    .mini-seg button {
-      background: var(--btn-inactive-bg);
-      border: 1px solid transparent;
-      color: var(--text-faint);
-      padding: 7px 4px;
-      font-size: 12px;
-      font-weight: 600;
-      border-radius: 7px;
-      cursor: pointer;
-    }
-
-    .mini-seg button.active {
-      background: var(--accent-color);
-      color: #ffffff;
-      border-color: #66a0ff;
-    }
-
-    .field-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .field-row[hidden] { display: none; }
-
-    .field {
-      display: flex;
-      align-items: center;
-      justify-content: center;
       gap: 8px;
-      flex: 0 0 auto;
     }
-	
-	#customBtn {
-	  color: yellow;	
-	}
-	
+
+    .select-col .card-title {
+      display: block;
+    }
+
+    .select {
+      width: 100%;
+      height: 49px;
+      background-color: var(--inset-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: 12px;
+      padding: 0 34px 0 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .select:focus {
+      outline: 2px solid var(--accent-color);
+      outline-offset: -1px;
+    }
+
 	#refreshBtn {
 	  color: lime;	
 	}
 	
-    .field input[type="number"] {
-      width: 82px;
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-    }
 
-    .unit {
-      font-size: 13px;
-      color: var(--text-sub);
-      font-weight: 600;
-    }
 
-    .field label {
-      font-size: 12px;
-      color: var(--text-sub);
-      font-weight: 600;
-      white-space: nowrap;
-    }
 
     input[type="number"], input[type="text"] {
       background: var(--field-bg);
@@ -328,18 +246,10 @@
       outline-offset: -1px;
     }
 
-    .hint {
-      font-size: 11px;
-      color: var(--text-sub);
-      line-height: 1.4;
-      margin-top: 2px;
-      width: 100%;
-      text-align: center;
-    }
 
     .thumb-grid-container {
-      min-height: 290px;
-      max-height: 290px;
+      min-height: 392px;
+      max-height: 392px;
       overflow-y: auto;
       overflow-x: hidden;
       padding: 2px;
@@ -350,8 +260,8 @@
     /* Larger height for Desktop / Wide screens */
     @media (min-width: 520px) {
       .thumb-grid-container {
-        min-height: 640px;
-        max-height: 640px;
+        min-height: 742px;
+        max-height: 742px;
       }
     }
 
@@ -452,6 +362,16 @@
 
     .action-grid.single-action {
       grid-template-columns: 1fr;
+    }
+
+    .action-grid.triple {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .action-grid.triple .btn-action {
+      font-size: 13px;
+      padding: 14px 4px;
     }
 
     .btn-action {
@@ -709,7 +629,7 @@
 
   <div class="header">
     <div>
-      <h1>QUICK SHARE 0.9.9</h1>
+      <h1>QUICK SHARE 1.0</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -729,50 +649,33 @@
     </div>
   </div>
 
-  <div class="controls-grid">
-    <div class="card">
-      <div class="card-title">Scale Size</div>
-      <div class="scale-row" id="sizeGroup">
-        <button class="btn-option" id="customBtn" data-role="custom">Custom</button>
-        <button class="btn-option" data-scale="0.40">40%</button>
-        <button class="btn-option active" data-scale="0.50">50%</button>
-        <button class="btn-option" data-scale="0.75">75%</button>
-        <button class="btn-option" data-scale="1.00">100%</button>
+  <div class="card">
+    <div class="select-row">
+      <div class="select-col">
+        <label class="card-title" for="sizeSelect">Scale Size</label>
+        <select class="select" id="sizeSelect">
+          <optgroup label="Percentage">
+            <option value="p30">30%</option>
+            <option value="p40">40%</option>
+            <option value="p50" selected>50%</option>
+            <option value="p60">60%</option>
+            <option value="p70">70%</option>
+            <option value="p80">80%</option>
+            <option value="p90">90%</option>
+            <option value="p100">100%</option>
+          </optgroup>
+          <optgroup label="Max size">
+            <option value="b1080">1080p</option>
+            <option value="b720">720p</option>
+          </optgroup>
+        </select>
       </div>
-
-      <div class="custom-panel" id="customPanel" hidden>
-        <div class="mini-seg" id="customModeSeg">
-          <button data-cmode="percent" class="active">Percentage</button>
-          <button data-cmode="pixels">Pixels</button>
-        </div>
-
-        <div class="field-row" id="customPercentRow">
-          <div class="field">
-            <label for="customPercent">Scale to</label>
-            <input type="number" id="customPercent" inputmode="numeric" min="1" max="400" step="1" value="25">
-            <span class="unit">%</span>
-          </div>
-        </div>
-
-        <div class="field-row" id="customPixelRow" hidden>
-          <div class="field">
-            <label for="customWidth">Max W</label>
-            <input type="number" id="customWidth" inputmode="numeric" min="1" max="20000" step="1" value="1920" placeholder="auto">
-          </div>
-          <div class="field">
-            <label for="customHeight">Max H</label>
-            <input type="number" id="customHeight" inputmode="numeric" min="1" max="20000" step="1" placeholder="auto">
-          </div>
-          <div class="hint">Images fit inside this box and keep their aspect ratio. Leave a field empty to let that side follow.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Format</div>
-      <div class="format-row" id="formatGroup">
-        <button class="btn-option active" data-format="image/jpeg">JPG</button>
-        <button class="btn-option" data-format="original">ORIG</button>
+      <div class="select-col">
+        <label class="card-title" for="formatSelect">Format</label>
+        <select class="select" id="formatSelect">
+          <option value="image/jpeg" selected>JPG</option>
+          <option value="original">Original</option>
+        </select>
       </div>
     </div>
   </div>
@@ -797,6 +700,9 @@
     <div id="dualActionContainer" class="action-grid" style="display: none;">
       <button class="btn-action btn-secondary" id="zipButton">
         📦 Download ZIP
+      </button>
+      <button class="btn-action btn-secondary" id="shareZipButton" style="display: none;">
+        📤 Share ZIP
       </button>
       <button class="btn-action ready-state" id="shareButton">
         📤 Share
@@ -909,12 +815,15 @@
    * ------------------------------------------------------------------ */
   let selectedFiles = [];          // { id, name, type, file, size, isHeic, el, img, badge }
   let processedFilesCache = [];
-  let scaleMode = 'percent';       // 'percent' | 'pixels'
+  let scaleMode = 'percent';       // 'percent' | 'box'
   let currentScale = 0.50;
-  let maxWidth = 1920;
-  let maxHeight = null;
-  let customMode = 'percent';      // which tab the Custom panel shows
+  let boxLong = 1920;              // 'box' mode: longest-side / shortest-side limits
+  let boxShort = 1080;
+  let boxTag = '1080p';
   let currentFormat = 'image/jpeg';
+  let zipCache = null;             // { blob, file } prebuilt for sharing when small enough
+  let zipToken = 0;
+  let shareSupported = false;
   let thumbObjectUrls = [];
   let isProcessed = false;
   let totalOriginalSize = 0;
@@ -952,20 +861,13 @@
   const dualActionContainer = document.getElementById('dualActionContainer');
   const zipButton = document.getElementById('zipButton');
   const shareButton = document.getElementById('shareButton');
+  const shareZipButton = document.getElementById('shareZipButton');
   const loader = document.getElementById('loader');
   const loaderText = document.getElementById('loaderText');
   const progressFill = document.getElementById('progressFill');
   const progressLabel = document.getElementById('progressLabel');
-  const sizeGroup = document.getElementById('sizeGroup');
-  const formatGroup = document.getElementById('formatGroup');
-  const customBtn = document.getElementById('customBtn');
-  const customPanel = document.getElementById('customPanel');
-  const customModeSeg = document.getElementById('customModeSeg');
-  const customPercentRow = document.getElementById('customPercentRow');
-  const customPixelRow = document.getElementById('customPixelRow');
-  const customPercent = document.getElementById('customPercent');
-  const customWidth = document.getElementById('customWidth');
-  const customHeight = document.getElementById('customHeight');
+  const sizeSelect = document.getElementById('sizeSelect');
+  const formatSelect = document.getElementById('formatSelect');
   const settingsSheet = document.getElementById('settingsSheet');
   const namePreview = document.getElementById('namePreview');
   const metaThemeColor = document.getElementById('metaThemeColor');
@@ -1075,61 +977,41 @@
   /* ------------------------------------------------------------------ *
    * Size controls
    * ------------------------------------------------------------------ */
-  function setPresetScale(scale, el) {
-    scaleMode = 'percent';
-    currentScale = scale;
-    markActive(sizeGroup, el);
-    customPanel.hidden = true;
-    invalidateProcessedCache();
-  }
+  const BOX_PRESETS = {
+    b1080: { long: 1920, short: 1080, tag: '1080p' },
+    b720:  { long: 1280, short: 720,  tag: '720p' }
+  };
 
-  function activateCustom() {
-    markActive(sizeGroup, customBtn);
-    customPanel.hidden = false;
-    applyCustomValues();
-  }
-
-  function applyCustomValues() {
-    if (customMode === 'percent') {
-      let pct = parseInt(customPercent.value, 10);
-      if (!isFinite(pct) || pct < 1) pct = 1;
-      if (pct > 400) pct = 400;
-      scaleMode = 'percent';
-      currentScale = pct / 100;
+  function applySizeChoice() {
+    const v = sizeSelect.value;
+    if (BOX_PRESETS[v]) {
+      scaleMode = 'box';
+      boxLong = BOX_PRESETS[v].long;
+      boxShort = BOX_PRESETS[v].short;
+      boxTag = BOX_PRESETS[v].tag;
     } else {
-      const w = parseInt(customWidth.value, 10);
-      const h = parseInt(customHeight.value, 10);
-      maxWidth = isFinite(w) && w > 0 ? w : null;
-      maxHeight = isFinite(h) && h > 0 ? h : null;
-      scaleMode = 'pixels';
+      const pct = parseInt(v.slice(1), 10);
+      scaleMode = 'percent';
+      currentScale = (isFinite(pct) && pct > 0 ? pct : 50) / 100;
     }
-    customBtn.textContent = customButtonLabel();
     invalidateProcessedCache();
   }
 
-  function customButtonLabel() {
-    if (customMode === 'pixels') {
-      if (!maxWidth && !maxHeight) return 'Custom';
-      if (maxWidth && maxHeight) return `${maxWidth}×${maxHeight}`;
-      return maxWidth ? `W ${maxWidth}px` : `H ${maxHeight}px`;
-    }
-    const pct = Math.round(currentScale * 100);
-    return customBtn.classList.contains('active') ? `${pct}%` : 'Custom';
-  }
-
-  function isCustomActive() {
-    return customBtn.classList.contains('active');
+  function applyFormatChoice() {
+    currentFormat = formatSelect.value;
+    invalidateProcessedCache();
   }
 
   /* Works out the output size for one image. */
   function computeTarget(width, height) {
-    let factor = 1;
-    if (scaleMode === 'pixels') {
-      const ratios = [];
-      if (maxWidth) ratios.push(maxWidth / width);
-      if (maxHeight) ratios.push(maxHeight / height);
-      factor = ratios.length ? Math.min.apply(null, ratios) : 1;
-      if (factor > 1) factor = 1;   // a max is a ceiling, never an enlargement
+    let factor;
+    if (scaleMode === 'box') {
+      // 1080p / 720p: fit inside the box, whichever way the photo is turned.
+      // Capped at 1, so a smaller image is never enlarged.
+      const landscape = width >= height;
+      const bw = landscape ? boxLong : boxShort;
+      const bh = landscape ? boxShort : boxLong;
+      factor = Math.min(1, bw / width, bh / height);
     } else {
       factor = currentScale;
     }
@@ -1140,24 +1022,7 @@
   }
 
   function sizeTag() {
-    if (scaleMode === 'pixels') {
-      if (maxWidth && maxHeight) return `${maxWidth}x${maxHeight}`;
-      if (maxWidth) return `w${maxWidth}`;
-      if (maxHeight) return `h${maxHeight}`;
-      return 'full';
-    }
-    return `${Math.round(currentScale * 100)}pct`;
-  }
-
-  function markActive(group, el) {
-    group.querySelectorAll('.btn-option').forEach(b => b.classList.remove('active'));
-    if (el) el.classList.add('active');
-  }
-
-  function setFormat(format, el) {
-    currentFormat = format;
-    markActive(formatGroup, el);
-    invalidateProcessedCache();
+    return scaleMode === 'box' ? boxTag : `${Math.round(currentScale * 100)}pct`;
   }
 
   /* ------------------------------------------------------------------ *
@@ -1440,6 +1305,9 @@
     isProcessed = false;
     processedFilesCache = [];
     shareOffset = 0;
+    zipToken++;
+    zipCache = null;
+    setShareZipVisible(false);
     singleActionContainer.style.display = 'block';
     dualActionContainer.style.display = 'none';
     actionButton.classList.remove('ready-state');
@@ -1472,18 +1340,10 @@
   /* Full reset, including the size and format controls. */
   function resetApp() {
     clearSelection();
-    customMode = 'percent';
-    customPercent.value = '25';
-    customWidth.value = '1920';
-    customHeight.value = '';
-    maxWidth = 1920;
-    maxHeight = null;
-    setCustomMode('percent');
-    customPanel.hidden = true;
-    customBtn.textContent = 'Custom';
-    const defaultScaleBtn = sizeGroup.querySelector('[data-scale="0.50"]');
-    setPresetScale(0.50, defaultScaleBtn);
-    setFormat('image/jpeg', formatGroup.querySelector('[data-format="image/jpeg"]'));
+    sizeSelect.value = 'p50';
+    formatSelect.value = 'image/jpeg';
+    applySizeChoice();
+    applyFormatChoice();
   }
 
   function clearOldThumbUrls() {
@@ -1707,12 +1567,9 @@
 
   function targetSize(w, h, p) {
     let f = 1;
-    if (p.scaleMode === 'pixels') {
-      const r = [];
-      if (p.maxWidth) r.push(p.maxWidth / w);
-      if (p.maxHeight) r.push(p.maxHeight / h);
-      f = r.length ? Math.min.apply(null, r) : 1;
-      if (f > 1) f = 1;
+    if (p.scaleMode === 'box') {
+      const land = w >= h;
+      f = Math.min(1, (land ? p.boxLong : p.boxShort) / w, (land ? p.boxShort : p.boxLong) / h);
     } else {
       f = p.scale;
     }
@@ -1884,7 +1741,7 @@
       msg: {
         id: i, op: 'convert', buffer,
         heic: fileObj.isHeic, mime: fileObj.type, outMime: pickOutputMime(fileObj),
-        scaleMode, scale: currentScale, maxWidth, maxHeight, quality: 0.88
+        scaleMode, scale: currentScale, boxLong, boxShort, quality: 0.88
       },
       transfer: [buffer]
     };
@@ -2047,6 +1904,7 @@
       dualActionContainer.style.display = 'grid';
       shareOffset = 0;
       updateShareButtonLabel();
+      prepareShareZip();           // runs in the background; reveals "Share ZIP" when it qualifies
 
       if (failures.length) {
         const names = failures.slice(0, 5).map(f => `• ${f.name}`).join('\n');
@@ -2128,8 +1986,75 @@
   /* ------------------------------------------------------------------ *
    * Output
    * ------------------------------------------------------------------ */
+  const ZIP_SHARE_LIMIT = 20 * 1024 * 1024;   // offer "Share ZIP" only below this size
+
+  function zipFileName() {
+    return `${naming.prefix ? sanitizeNamePart(naming.prefix) : 'QuickShare'}_${sizeTag()}.zip`;
+  }
+
+  function buildZipBlob(files, onProgress) {
+    const zip = new JSZip();
+    files.forEach(file => zip.file(file.name, file));
+    // STORE: JPEG/PNG/WebP are already compressed, so deflating them only burns CPU.
+    return zip.generateAsync({ type: 'blob', compression: 'STORE' }, onProgress);
+  }
+
+  function saveBlobAs(blob, name) {
+    const downloadUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 10000);
+  }
+
+  function setShareZipVisible(visible) {
+    shareZipButton.style.display = visible ? 'flex' : 'none';
+    dualActionContainer.classList.toggle('triple', !!visible);
+    zipButton.textContent = visible ? '📦 Save ZIP' : '📦 Download ZIP';
+  }
+
+  /* Builds the ZIP ahead of time when it is small enough to share, so the tap
+     on "Share ZIP" can call navigator.share() immediately (it needs a fresh gesture). */
+  async function prepareShareZip() {
+    if (!shareSupported || typeof JSZip !== 'function') return;
+    const files = processedFilesCache.slice();
+    const bytes = files.reduce((acc, f) => acc + f.size, 0);
+    if (!files.length || bytes >= ZIP_SHARE_LIMIT) return;
+
+    const token = ++zipToken;
+    try {
+      const blob = await buildZipBlob(files);
+      if (token !== zipToken || !isProcessed) return;        // settings changed meanwhile
+      if (blob.size >= ZIP_SHARE_LIMIT) return;
+      const file = new File([blob], zipFileName(), { type: 'application/zip' });
+      if (!navigator.canShare({ files: [file] })) return;
+      zipCache = { blob, file };
+      setShareZipVisible(true);
+    } catch (err) {
+      console.warn('Could not prepare a shareable ZIP:', err);
+    }
+  }
+
+  async function shareZipNow() {
+    if (!zipCache || isSharing) return;
+    isSharing = true;
+    try {
+      await navigator.share({ files: [zipCache.file] });
+    } catch (err) {
+      if (!err || err.name !== 'AbortError') {
+        alert('Sharing the ZIP failed: ' + (err && err.message ? err.message : err) + '\n\nUse Save ZIP instead.');
+      }
+    } finally {
+      isSharing = false;
+    }
+  }
+
   async function downloadAllZip() {
     if (processedFilesCache.length === 0 || isBusy) return;
+    if (zipCache) { saveBlobAs(zipCache.blob, zipCache.file.name); return; }
     if (typeof JSZip !== 'function') {
       alert('The ZIP library is not loaded. Reconnect once so it can be cached for offline use.');
       return;
@@ -2140,23 +2065,12 @@
     await nextFrame();
 
     try {
-      const zip = new JSZip();
-      processedFilesCache.forEach(file => zip.file(file.name, file));
-
-      const zipContent = await zip.generateAsync({ type: 'blob', compression: 'STORE' }, (metadata) => {
+      const zipContent = await buildZipBlob(processedFilesCache, (metadata) => {
         const pct = Math.round(metadata.percent);
         progressFill.style.width = pct + '%';
         progressLabel.textContent = `${pct}% complete — packing ${processedFilesCache.length} images`;
       });
-
-      const downloadUrl = URL.createObjectURL(zipContent);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `${naming.prefix ? sanitizeNamePart(naming.prefix) : 'QuickShare'}_${sizeTag()}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 10000);
+      saveBlobAs(zipContent, zipFileName());
     } catch (err) {
       alert('The ZIP archive could not be built: ' + (err && err.message ? err.message : err));
     } finally {
@@ -2346,16 +2260,6 @@
     settingsSheet.hidden = true;
   }
 
-  function setCustomMode(mode) {
-    customMode = mode;
-    customModeSeg.querySelectorAll('button').forEach(b => {
-      b.classList.toggle('active', b.dataset.cmode === mode);
-    });
-    customPercentRow.hidden = mode !== 'percent';
-    customPixelRow.hidden = mode !== 'pixels';
-    if (isCustomActive()) applyCustomValues();
-  }
-
   /* ------------------------------------------------------------------ *
    * Wiring
    * ------------------------------------------------------------------ */
@@ -2367,27 +2271,8 @@
     finally { fileInput.value = ''; }         // lets the same file be picked again
   });
 
-  sizeGroup.addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-option');
-    if (!btn) return;
-    if (btn.dataset.role === 'custom') activateCustom();
-    else setPresetScale(parseFloat(btn.dataset.scale), btn);
-  });
-
-  formatGroup.addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-option');
-    if (btn) setFormat(btn.dataset.format, btn);
-  });
-
-  customModeSeg.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (btn) setCustomMode(btn.dataset.cmode);
-  });
-
-  [customPercent, customWidth, customHeight].forEach(input => {
-    input.addEventListener('input', () => { if (isCustomActive()) applyCustomValues(); });
-    input.addEventListener('change', () => { if (isCustomActive()) applyCustomValues(); });
-  });
+  sizeSelect.addEventListener('change', applySizeChoice);
+  formatSelect.addEventListener('change', applyFormatChoice);
 
   document.getElementById('themeBtn').addEventListener('click', cycleTheme);
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
@@ -2412,6 +2297,7 @@
   actionButton.addEventListener('click', () => { if (!isProcessed) processAllImages(); });
   zipButton.addEventListener('click', downloadAllZip);
   shareButton.addEventListener('click', shareNow);
+  shareZipButton.addEventListener('click', shareZipNow);
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !settingsSheet.hidden) closeSettings();
@@ -2457,7 +2343,8 @@
     }
 
     // No share sheet on this device, so give the whole bar to the ZIP download.
-    if (!canShareFiles()) {
+    shareSupported = canShareFiles();
+    if (!shareSupported) {
       shareButton.hidden = true;
       shareButton.style.display = 'none';
       dualActionContainer.classList.add('single-action');
