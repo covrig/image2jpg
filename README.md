@@ -7,13 +7,13 @@ no server, no accounts.
 ## Features
 
 - **Batch conversion** — select or drag & drop multiple images
-- **HEIC / HEIF support** via lazy-loaded `libheif` WASM, only fetched when a HEIC file needs decoding
+- **HEIC / HEIF support** 
 - **True format detection** from file bytes, not the extension or MIME type, so a JPEG saved as `.heic` (or vice versa) is still handled correctly
-- **Scale presets** — 1080p / 720p box fit, or 25 / 50 / 75 / 100 % (percent mode default: 50 %)
-- **JPEG quality** — 60 / 70 / 80 / 85 / 90 / 100 % (default: 80 %)
+- **Scale presets** — 1080p / 720p box fit, or 25 / 50 / 75 / 100 % 
+- **JPEG quality**
 - **Built-in editor** — crop with draggable corners, straighten slider (−45° to +45°), perspective correction, plus annotations: arrow, circle, rectangle, loupe (1.5×–8×), move and text
 - **Full-screen viewer** — pinch/wheel zoom (up to 8×), pan, double-tap zoom, swipe/arrow-key navigation
-- **Custom file naming** — prefix, keep original name, date stamp, suffix, quality tag (`q80`), zero-padded index with custom start, digit count and separator
+- **Custom file naming** — prefix, keep original name, date stamp, suffix, quality tag, zero-padded index with custom start, digit count and separator
 - **Export** — ZIP download (`compression: STORE`, since JPEGs are already compressed) or native share sheet
 - **Works on phones and desktop** — responsive mobile layout plus a wide two-column desktop layout; PWA with install prompt and service worker for offline use
 
