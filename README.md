@@ -4,8 +4,6 @@ A client-side, single-page web app that batch-converts images (HEIC, JPEG, PNG,
 WebP, GIF, AVIF and more) to JPG with resizing and quality control — no uploads,
 no server, no accounts.
 
-Version 1.4.1
-
 ## Features
 
 - **Batch conversion** — select or drag & drop multiple images
