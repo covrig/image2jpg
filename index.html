@@ -709,7 +709,7 @@
 
   <div class="header">
     <div>
-      <h1>QUICK SHARE 0.9.8</h1>
+      <h1>QUICK SHARE 0.9.9</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1695,8 +1695,11 @@
     mediaQuery('(pointer: coarse)').matches);
   const CORES = navigator.hardwareConcurrency || 4;
   // Phones decode a 12 MP HEIC to ~50 MB of RGBA each, so keep the pool small there.
-  const POOL_SIZE = IS_MOBILE ? Math.max(1, Math.min(2, CORES - 1)) : Math.max(1, Math.min(6, CORES - 1));
-  const THUMB_POOL_SIZE = Math.min(IS_MOBILE ? 1 : 2, POOL_SIZE);
+  // navigator.deviceMemory (Chrome/Android) reports RAM in GB, capped at 8. Unknown -> assume 4.
+  const MEM_GB = navigator.deviceMemory || 4;
+  const MOBILE_POOL = MEM_GB >= 8 ? 4 : (MEM_GB >= 4 ? 3 : 2);
+  const POOL_SIZE = IS_MOBILE ? Math.max(1, Math.min(MOBILE_POOL, CORES - 1)) : Math.max(1, Math.min(6, CORES - 1));
+  const THUMB_POOL_SIZE = Math.min(IS_MOBILE ? (MEM_GB >= 8 ? 2 : 1) : 2, POOL_SIZE);
 
   const WORKER_BODY = `
   let lib = null;
