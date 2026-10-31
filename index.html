@@ -364,6 +364,11 @@
       grid-template-columns: 1fr;
     }
 
+    #shareButton {
+      white-space: pre-line;
+      line-height: 1.2;
+    }
+
     .action-grid.triple {
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
@@ -629,7 +634,7 @@
 
   <div class="header">
     <div>
-      <h1>QUICK SHARE 1.0</h1>
+      <h1>QUICK SHARE 1.0.1</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -664,7 +669,7 @@
             <option value="p90">90%</option>
             <option value="p100">100%</option>
           </optgroup>
-          <optgroup label="Max size">
+          <optgroup label="Max size (never enlarged)">
             <option value="b1080">1080p</option>
             <option value="b720">720p</option>
           </optgroup>
@@ -1986,7 +1991,7 @@
   /* ------------------------------------------------------------------ *
    * Output
    * ------------------------------------------------------------------ */
-  const ZIP_SHARE_LIMIT = 20 * 1024 * 1024;   // offer "Share ZIP" only below this size
+  let zipShareLimit = 20 * 1024 * 1024;   // offer "Share ZIP" only below this size (learns from failures)
 
   function zipFileName() {
     return `${naming.prefix ? sanitizeNamePart(naming.prefix) : 'QuickShare'}_${sizeTag()}.zip`;
@@ -2022,13 +2027,13 @@
     if (!shareSupported || typeof JSZip !== 'function') return;
     const files = processedFilesCache.slice();
     const bytes = files.reduce((acc, f) => acc + f.size, 0);
-    if (!files.length || bytes >= ZIP_SHARE_LIMIT) return;
+    if (!files.length || bytes >= zipShareLimit) return;
 
     const token = ++zipToken;
     try {
       const blob = await buildZipBlob(files);
       if (token !== zipToken || !isProcessed) return;        // settings changed meanwhile
-      if (blob.size >= ZIP_SHARE_LIMIT) return;
+      if (blob.size >= zipShareLimit) return;
       const file = new File([blob], zipFileName(), { type: 'application/zip' });
       if (!navigator.canShare({ files: [file] })) return;
       zipCache = { blob, file };
@@ -2045,7 +2050,16 @@
       await navigator.share({ files: [zipCache.file] });
     } catch (err) {
       if (!err || err.name !== 'AbortError') {
-        alert('Sharing the ZIP failed: ' + (err && err.message ? err.message : err) + '\n\nUse Save ZIP instead.');
+        // Android refuses big hand-overs. Remember half of this size as the new ceiling,
+        // and stop offering Share ZIP for this batch (Save ZIP keeps working).
+        const size = zipCache ? zipCache.blob.size : 0;
+        if (size > 0) {
+          zipShareLimit = Math.floor(size / 2);
+          store('qs_zip_limit', String(zipShareLimit));
+        }
+        setShareZipVisible(false);
+        const detail = err ? ((err.name ? err.name + ': ' : '') + (err.message || '')) : 'unknown error';
+        alert('Sharing the ZIP failed (' + (size / (1024 * 1024)).toFixed(1) + ' MB)\n' + detail + '\n\nUse Save ZIP instead.');
       }
     } finally {
       isSharing = false;
@@ -2118,7 +2132,7 @@
     if (shareChunkSize > 0 && total > shareChunkSize) {
       const from = shareOffset + 1;
       const to = Math.min(shareOffset + shareChunkSize, total);
-      shareButton.textContent = `📤 Share ${from}–${to} of ${total}`;
+      shareButton.textContent = `📤 Share ${from}–${to}\nof ${total}`;
     } else {
       shareButton.textContent = '📤 Share';
     }
@@ -2328,6 +2342,9 @@
     const savedTheme = read('qs_theme');
     if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'auto') themePref = savedTheme;
     applyTheme();
+
+    const savedZipLimit = parseInt(read('qs_zip_limit'), 10);
+    if (isFinite(savedZipLimit) && savedZipLimit >= 0) zipShareLimit = Math.min(zipShareLimit, savedZipLimit);
 
     const savedChunk = parseInt(read('qs_share_chunk'), 10);
     if (isFinite(savedChunk) && savedChunk > 0) shareChunkSize = savedChunk;
