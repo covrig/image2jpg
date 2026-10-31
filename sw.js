@@ -1,5 +1,5 @@
 /* Quick Share service worker — offline app shell */
-const VERSION = 'quickshare-v9.5';
+const VERSION = 'quickshare-v0.9.8';
 const CORE = [
   './',
   './image_converter_share.html',
@@ -47,12 +47,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req);
-        const cache = await caches.open(VERSION);
-        cache.put('./index.html', fresh.clone());
+        if (fresh.ok) (await caches.open(VERSION)).put(req, fresh.clone());
         return fresh;
       } catch (e) {
-        const cached = await caches.match('./index.html', { ignoreSearch: true });
-        return cached || Response.error();
+        return (await caches.match(req, { ignoreSearch: true }))
+            || (await caches.match('./image_converter_share.html'))
+            || (await caches.match('./'))
+            || Response.error();
       }
     })());
     return;
