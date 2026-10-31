@@ -78,7 +78,4 @@ On devices with no file-share support, the action bar shows the ZIP download onl
 
 ## Run locally
 
-Just open `index.html` in a browser, or serve it statically:
-
-```bash
-npx serve .
+Just open `index.html` in a browser
