@@ -7,11 +7,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Quick Share">
+  <meta name="apple-mobile-web-app-title" content="Image Share">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <title>QUICK SHARE</title>
+  <title>IMAGE SHARE</title>
 
   <!-- libheif is loaded lazily (inside Web Workers) the first time a HEIC file is added -->
   <!-- JSZip for ZIP archive downloads -->
@@ -222,10 +222,10 @@
       outline-offset: -1px;
     }
 
-	#refreshBtn {
-	  color: lime;	
-	}
-	
+    #refreshBtn {
+      color: lime;	
+    }
+    
 
 
 
@@ -302,18 +302,38 @@
       object-fit: cover;
     }
 
-    .thumb-ext {
+    /* ---- Stacked thumbnail meta bar: format line + size line ---- */
+    .thumb-meta {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
       background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      padding: 3px 4px 4px 4px;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .thumb-ext {
       font-size: 10px;
       font-weight: 700;
-      text-align: center;
-      padding: 3px 0;
-      color: #ffffff;
       text-transform: uppercase;
+      color: #ffffff;                 /* HEIC stays white */
+    }
+
+    /* Any other format gets lime before conversion */
+    .thumb-ext.is-heic     { color: #ffffff; }
+    .thumb-ext.is-other    { color: #00ff00; }
+    /* After conversion everything turns accent blue */
+    .thumb-ext.is-converted{ color: #00ff00; }
+    .thumb-ext.is-failed   { color: var(--danger-color); }
+
+    .thumb-size {
+      font-size: 9px;
+      font-weight: 600;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
     }
 
     .thumb-remove {
@@ -613,13 +633,119 @@
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; animation: none !important; }
     }
+
+    /* ================================================================== *
+     * DESKTOP LAYOUT — mouse-driven, wide windows only.
+     * Phones and touch tablets never match this block, so they are unchanged.
+     * Left column: drop zone, options, action buttons.
+     * Right column: previews, filling the rest of the window.
+     * ================================================================== */
+    @media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+      body {
+        max-width: 1900px;
+        height: 100vh;
+        height: 100dvh;
+        padding: 18px 28px 24px 28px;
+        display: grid;
+        grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+        grid-template-rows: auto auto auto auto 1fr;
+        column-gap: 20px;
+        row-gap: 12px;
+        align-items: start;
+        overflow: hidden;
+      }
+
+      .header {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        margin-bottom: 0;
+      }
+
+      h1 { font-size: 22px; }
+
+      .card { margin-bottom: 0 !important; padding: 14px; border-radius: 16px; }
+
+      .card-drop { grid-column: 1; grid-row: 2; }
+      .card-opts { grid-column: 1; grid-row: 3; }
+
+      /* Bigger drop target */
+      .drop-zone {
+        flex-direction: column;
+        gap: 10px;
+        min-height: 230px;
+        padding: 32px 20px;
+        border-width: 2px;
+        border-radius: 14px;
+      }
+      .drop-zone > span:first-child { font-size: 56px !important; line-height: 1; }
+      .drop-zone-text { font-size: 18px; }
+      .drop-zone:hover { background: var(--accent-soft-strong); }
+
+      .select { height: 52px; }
+
+      /* Action buttons sit in the left column instead of a fixed bottom bar */
+      .action-bar {
+        position: static;
+        grid-column: 1;
+        grid-row: 4;
+        transform: none;
+        width: auto;
+        max-width: none;
+        padding: 0;
+        background: transparent;
+        border-top: none;
+        backdrop-filter: none;
+        z-index: auto;
+      }
+      .btn-action { padding: 18px; font-size: 16px; }
+      .btn-action:not(:disabled):hover { filter: brightness(1.1); }
+
+      /* Previews: whole right column, full height */
+      .card-preview {
+        grid-column: 2;
+        grid-row: 2 / 6;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .card-preview .card-title { font-size: 13px; margin-bottom: 10px; }
+      .card-preview .card-title #sizeStats { font-size: 13px !important; }
+
+      .thumb-grid-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        padding: 4px;
+      }
+
+      #thumbGrid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .thumb-wrapper { border-radius: 12px; }
+      .thumb-meta  { padding: 4px 6px 5px 6px; }
+      .thumb-ext   { font-size: 11px; }
+      .thumb-size  { font-size: 10px; }
+      .thumb-remove { width: 28px; height: 28px; line-height: 28px; font-size: 14px; }
+
+      .empty-state {
+        font-size: 16px;
+        padding: 20vh 0 0 0;
+      }
+
+      /* Settings as a centred dialog rather than a bottom sheet */
+      .sheet { align-items: center; }
+      .sheet-panel { border-radius: 18px; max-width: 480px; max-height: 90vh; }
+    }
   </style>
 </head>
 <body>
 
   <div class="header">
     <div>
-      <h1>QUICK SHARE 1.0.3</h1>
+      <h1>IMAGE SHARE 1.1</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -631,7 +757,7 @@
     </div>
   </div>
 
-  <div class="card" style="margin-bottom: 8px;">
+  <div class="card card-drop" style="margin-bottom: 8px;">
     <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" style="display: none;">
     <div class="drop-zone" id="dropZone">
       <span style="font-size: 20px;">🖼️</span>
@@ -639,7 +765,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card card-opts">
     <div class="select-row">
       <div class="select-col">
         <label class="card-title" for="sizeSelect">Scale Size</label>
@@ -666,9 +792,9 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card card-preview">
     <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
-      <span id="previewTitle">Selected Previews (0)</span>
+      <span id="previewTitle">Preview (0)</span>
       <span id="sizeStats" style="text-transform: none; font-weight: 500; font-size: 11px;"></span>
     </div>
     <div class="thumb-grid-container">
@@ -796,7 +922,7 @@
   /* ------------------------------------------------------------------ *
    * State
    * ------------------------------------------------------------------ */
-  let selectedFiles = [];          // { id, name, type, file, size, isHeic, el, img, badge }
+  let selectedFiles = [];          // { id, name, type, file, size, isHeic, el, img, badge, sizeEl }
   let processedFilesCache = [];
   let scaleMode = 'percent';       // 'percent' | 'box'
   let currentScale = 0.50;
@@ -923,7 +1049,7 @@
     if (convBytes !== null) {
       convStr = `<span style="color: var(--success-color); font-weight: 700;">${formatBytes(convBytes)}</span>`;
     }
-    sizeStats.innerHTML = `Orig: ${origStr} | Conv: ${convStr}`;
+    sizeStats.innerHTML = `Original: ${origStr} | Converted: ${convStr}`;
   }
 
   /* ------------------------------------------------------------------ *
@@ -1107,6 +1233,40 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Thumbnail meta bar (format + size) colour coding
+   * ------------------------------------------------------------------ */
+  /* Before conversion: white for HEIC, lime for every other format. */
+  function resetThumbBadges() {
+    selectedFiles.forEach(f => {
+      if (!f.el) return;
+      f.el.classList.remove('is-failed');
+      if (f.badge) {
+        f.badge.textContent = f.noPreview ? 'NO PREVIEW' : (f.extLabel || '');
+        f.badge.className = 'thumb-ext ' +
+          (f.noPreview ? 'is-failed' : (f.isHeic ? 'is-heic' : 'is-other'));
+      }
+      if (f.sizeEl) {
+        f.sizeEl.textContent = f.origSizeLabel;
+        f.sizeEl.className = 'thumb-size';
+      }
+    });
+  }
+
+  /* After conversion: accent blue, and the label shows the format actually produced. */
+  function markThumbConverted(fileObj, outFile) {
+    const mime = (outFile && outFile.type) || '';
+    const label = mime ? extFromMime(mime) : (fileObj.extLabel || 'img');
+    if (fileObj.badge) {
+      fileObj.badge.textContent = label;
+      fileObj.badge.className = 'thumb-ext is-converted';
+    }
+    if (fileObj.sizeEl) {
+      fileObj.sizeEl.textContent = `${fileObj.origSizeLabel} > ${formatBytes(outFile.size)}`;
+      fileObj.sizeEl.className = 'thumb-size';
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
    * Selection handling
    * ------------------------------------------------------------------ */
   /* Real format is decided from the file's first bytes, not its name or MIME type,
@@ -1217,10 +1377,22 @@
     img.alt = fileObj.name;
     img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" fill="%232c2c2e"><rect width="120" height="120"/></svg>';
 
+    /* Stacked meta bar: format line (colour-coded) above the file size line. */
+    const meta = document.createElement('div');
+    meta.className = 'thumb-meta';
+
     const badge = document.createElement('div');
-    badge.className = 'thumb-ext';
+    badge.className = 'thumb-ext ' + (fileObj.isHeic ? 'is-heic' : 'is-other');
     badge.textContent = ext;
     fileObj.extLabel = ext;
+
+    const sizeEl = document.createElement('div');
+    sizeEl.className = 'thumb-size';
+    sizeEl.textContent = formatBytes(fileObj.size);
+    fileObj.origSizeLabel = sizeEl.textContent;
+
+    meta.appendChild(badge);
+    meta.appendChild(sizeEl);
 
     const remove = document.createElement('button');
     remove.className = 'thumb-remove';
@@ -1234,13 +1406,14 @@
     });
 
     wrap.appendChild(img);
-    wrap.appendChild(badge);
+    wrap.appendChild(meta);
     wrap.appendChild(remove);
     thumbGrid.appendChild(wrap);
 
     fileObj.el = wrap;
     fileObj.img = img;
     fileObj.badge = badge;
+    fileObj.sizeEl = sizeEl;
 
     if (fileObj.isHeic) {
       queueHeicThumbnail(fileObj);
@@ -1274,19 +1447,21 @@
 
   function updateSelectionUI() {
     const n = selectedFiles.length;
-    previewTitle.textContent = `Selected Previews (${n})`;
+    previewTitle.textContent = `Preview (${n})`;
     emptyState.style.display = n ? 'none' : 'block';
     thumbGrid.style.display = n ? 'grid' : 'none';
     actionButton.disabled = n === 0;
   }
 
   function invalidateProcessedCache() {
+    /* Settings changed, so any "converted" styling on the thumbnails is void. */
     isProcessed = false;
     processedFilesCache = [];
     shareOffset = 0;
     singleActionContainer.style.display = 'block';
     dualActionContainer.style.display = 'none';
     actionButton.classList.remove('ready-state');
+    resetThumbBadges();
     if (selectedFiles.length > 0) {
       actionButton.disabled = false;
       actionButton.textContent = `Resize ${selectedFiles.length} image${selectedFiles.length === 1 ? '' : 's'}`;
@@ -1735,7 +1910,11 @@
         const f = live[i];
         if (data.error || !data.blob) {
           console.error('HEIC thumbnail failed:', f.name, data.error);
-          if (f.badge) f.badge.textContent = 'NO PREVIEW';
+          f.noPreview = true;
+          if (f.badge) {
+            f.badge.textContent = 'NO PREVIEW';
+            f.badge.className = 'thumb-ext is-failed';
+          }
         } else if (f.el && f.el.isConnected) {
           const url = URL.createObjectURL(data.blob);
           thumbObjectUrls.push(url);
@@ -1785,7 +1964,11 @@
       });
     } catch (err) {
       console.error('HEIC thumbnail failed:', fileObj.name, err);
-      if (fileObj.badge) fileObj.badge.textContent = 'NO PREVIEW';
+      fileObj.noPreview = true;
+      if (fileObj.badge) {
+        fileObj.badge.textContent = 'NO PREVIEW';
+        fileObj.badge.className = 'thumb-ext is-failed';
+      }
     }
   }
 
@@ -1808,14 +1991,21 @@
       console.error('Conversion failed:', fileObj.name, err);
       failures.push({ name: fileObj.name, message: err && err.message ? err.message : String(err) });
       if (fileObj.el) fileObj.el.classList.add('is-failed');
-      if (fileObj.badge) fileObj.badge.textContent = 'FAILED';
+      if (fileObj.badge) {
+        fileObj.badge.textContent = 'FAILED';
+        fileObj.badge.className = 'thumb-ext is-failed';
+      }
+      if (fileObj.sizeEl) {
+        fileObj.sizeEl.textContent = fileObj.origSizeLabel;
+        fileObj.sizeEl.className = 'thumb-size';
+      }
     };
 
     try {
-      selectedFiles.forEach(f => {
-        if (f.el) f.el.classList.remove('is-failed');
-        if (f.badge && f.badge.textContent === 'FAILED') f.badge.textContent = f.extLabel || '';
-      });
+      /* Wipe any leftovers from a previous run so colours start from the
+         pre-conversion rule: white for HEIC, lime for everything else. */
+      selectedFiles.forEach(f => { f.converted = false; });
+      resetThumbBadges();
 
       const results = new Array(total).fill(null);
       let usedWorkers = false;
@@ -1852,13 +2042,22 @@
       for (let i = 0; i < total; i++) {
         const r = results[i];
         if (!r) continue;
-        if (r.file) { processedFilesCache.push(r.file); continue; }
-        const mime = r.blob.type || pickOutputMime(selectedFiles[i]);
-        const name = makeUnique(
-          buildFileName(stripExt(selectedFiles[i].name), selectedFiles[i].file.lastModified, i, extFromMime(mime)),
-          usedNames
-        );
-        processedFilesCache.push(new File([r.blob], name, { type: mime }));
+        let outFile;
+        if (r.file) {
+          outFile = r.file;
+        } else {
+          const mime = r.blob.type || pickOutputMime(selectedFiles[i]);
+          const name = makeUnique(
+            buildFileName(stripExt(selectedFiles[i].name), selectedFiles[i].file.lastModified, i, extFromMime(mime)),
+            usedNames
+          );
+          outFile = new File([r.blob], name, { type: mime });
+        }
+        processedFilesCache.push(outFile);
+        /* Badge turns accent blue and reports the format it really came out as:
+           HEIC -> jpg, Original -> whatever it stayed as (jpg / png / webp). */
+        selectedFiles[i].converted = true;
+        markThumbConverted(selectedFiles[i], outFile);
       }
 
       hideProgress();
@@ -1962,7 +2161,7 @@
    * Output
    * ------------------------------------------------------------------ */
   function zipFileName() {
-    return `${naming.prefix ? sanitizeNamePart(naming.prefix) : 'QuickShare'}_${sizeTag()}.zip`;
+    return `${naming.prefix ? sanitizeNamePart(naming.prefix) : 'ImageShare'}_${sizeTag()}.zip`;
   }
 
   function buildZipBlob(files, onProgress) {
@@ -2002,7 +2201,7 @@
       });
       saveBlobAs(zipContent, zipFileName());
     } catch (err) {
-      alert('The ZIP archive could not be built: ' + (err && err.message ? err.message : err));
+      alert('The ZIP archive could not be built: ' + (err && err.message ? err && err.message : err));
     } finally {
       hideProgress();
       isBusy = false;
