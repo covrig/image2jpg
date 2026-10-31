@@ -632,6 +632,190 @@
       border-color: #66a0ff;
     }
 
+    /* ---- Thumbnails are tappable; pencil badge marks edited photos ---- */
+    .thumb-wrapper { cursor: pointer; }
+
+    .thumb-edited {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      color: #ffffff;
+      font-size: 13px;
+      line-height: 24px;
+      text-align: center;
+      display: none;
+      pointer-events: none;
+    }
+
+    .thumb-edited.on { display: block; }
+
+    /* ---- Full-screen viewer and editor ---- */
+    .overlay-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 1300;
+      display: flex;
+      flex-direction: column;
+      background: #000000;
+      color: #ffffff;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .overlay-screen[hidden] { display: none; }
+    #editor { z-index: 1400; }
+
+    .ov-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: calc(8px + env(safe-area-inset-top)) 10px 8px 10px;
+      background: rgba(0, 0, 0, 0.85);
+      flex: 0 0 auto;
+    }
+
+    .ov-bar.bottom {
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom)) 10px;
+      justify-content: center;
+    }
+
+    .ov-title {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ov-title small {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: #8e8e93;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ov-btn {
+      background: #2c2c2e;
+      color: #ffffff;
+      border: 1px solid #3a3a3c;
+      border-radius: 10px;
+      padding: 9px 13px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .ov-btn:active { background: #3a3a3c; }
+    .ov-btn.primary, .ov-btn.active { background: var(--accent-color); border-color: #66a0ff; }
+    .ov-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .viewer-stage, .ed-stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #viewerImg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transform-origin: 50% 50%;
+      will-change: transform;
+      -webkit-user-drag: none;
+      user-drag: none;
+      pointer-events: none;
+    }
+
+    #viewerMsg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8e8e93;
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .viewer-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(44, 44, 46, 0.75);
+      color: #ffffff;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .viewer-nav:disabled { display: none; }
+    #viewerPrev { left: 8px; }
+    #viewerNext { right: 8px; }
+
+    #edCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .ed-tools {
+      flex: 0 0 auto;
+      padding: 8px 10px 4px 10px;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ed-tools[hidden] { display: none; }
+
+    .ed-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ed-row[hidden] { display: none; }
+    .ed-lbl { font-size: 12px; font-weight: 700; color: #8e8e93; flex: 0 0 auto; }
+    .ed-row input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--accent-color); }
+    #edAngleVal { flex: 0 0 52px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    #edTextRow input[type="text"] { flex: 1 1 auto; min-width: 0; }
+
+    .ed-swatch {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 2px solid #3a3a3c;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .ed-swatch.active { border-color: #ffffff; box-shadow: 0 0 0 2px var(--accent-color); }
+
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; animation: none !important; }
     }
@@ -748,7 +932,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.2.6</h1>
+      <h1>IMAGE2JPG 1.2.7</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -928,6 +1112,69 @@
         <button class="btn-sheet" id="sheetResetBtn">Reset</button>
         <button class="btn-sheet primary" id="sheetDoneBtn">Done</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Full-screen viewer: pinch-zoom, pan, previous / next, Edit -->
+  <div class="overlay-screen" id="viewer" hidden>
+    <div class="ov-bar">
+      <button class="ov-btn" id="viewerClose" type="button" aria-label="Close viewer">✕</button>
+      <div class="ov-title" id="viewerTitle">Photo<small></small></div>
+      <button class="ov-btn primary" id="viewerEdit" type="button">✎ Edit</button>
+    </div>
+    <div class="viewer-stage" id="viewerStage">
+      <img id="viewerImg" alt="" draggable="false">
+      <div id="viewerMsg"></div>
+      <button class="viewer-nav" id="viewerPrev" type="button" aria-label="Previous photo">‹</button>
+      <button class="viewer-nav" id="viewerNext" type="button" aria-label="Next photo">›</button>
+    </div>
+  </div>
+
+  <!-- Editor: crop / straighten / perspective, and annotations -->
+  <div class="overlay-screen" id="editor" hidden>
+    <div class="ov-bar">
+      <button class="ov-btn" id="edCancel" type="button">Cancel</button>
+      <div class="ov-title" id="edTitle">Edit<small></small></div>
+      <button class="ov-btn primary" id="edDone" type="button">Done</button>
+    </div>
+
+    <div class="ed-stage" id="edStage">
+      <canvas id="edCanvas"></canvas>
+    </div>
+
+    <div class="ed-tools" id="edToolsCrop">
+      <div class="ed-row">
+        <span class="ed-lbl">Straighten</span>
+        <input type="range" id="edAngle" min="-45" max="45" step="0.1" value="0" aria-label="Straighten">
+        <span id="edAngleVal">0.0°</span>
+      </div>
+      <div class="ed-row">
+        <button class="ov-btn" id="edFull" type="button">Full image</button>
+        <button class="ov-btn" id="edResetAll" type="button">Reset all</button>
+      </div>
+    </div>
+
+    <div class="ed-tools" id="edToolsAnno" hidden>
+      <div class="ed-row">
+        <button class="ov-btn active" id="edToolArrow" type="button" data-tool="arrow">➚ Arrow</button>
+        <button class="ov-btn" id="edToolEllipse" type="button" data-tool="ellipse">◯ Circle</button>
+        <button class="ov-btn" id="edToolText" type="button" data-tool="text">T Text</button>
+      </div>
+      <div class="ed-row" id="edColors"></div>
+      <div class="ed-row">
+        <button class="ov-btn" id="edSize" type="button">Size: M</button>
+        <button class="ov-btn" id="edUndo" type="button">↶ Undo</button>
+        <button class="ov-btn" id="edClear" type="button">Clear</button>
+      </div>
+      <div class="ed-row" id="edTextRow" hidden>
+        <input type="text" id="edTextInput" placeholder="Type, then tap Add" maxlength="60">
+        <button class="ov-btn primary" id="edTextAdd" type="button">Add</button>
+      </div>
+    </div>
+
+    <div class="ov-bar bottom">
+      <button class="ov-btn active" id="edTabCrop" type="button">Crop</button>
+      <button class="ov-btn" id="edTabAnno" type="button">Annotate</button>
     </div>
   </div>
 
@@ -1428,11 +1675,26 @@
       removeFile(fileObj.id);
     });
 
+    /* Small pencil badge, shown once the photo has been cropped or annotated. */
+    const editedBadge = document.createElement('div');
+    editedBadge.className = 'thumb-edited';
+    editedBadge.textContent = '✎';
+    editedBadge.title = 'Edited';
+
     wrap.appendChild(img);
     wrap.appendChild(meta);
+    wrap.appendChild(editedBadge);
     wrap.appendChild(remove);
     thumbGrid.appendChild(wrap);
 
+    /* Tap a thumbnail to open the full-screen viewer. */
+    wrap.addEventListener('click', () => {
+      if (isBusy) return;
+      const idx = selectedFiles.findIndex(f => f.id === fileObj.id);
+      if (idx !== -1) openViewer(idx);
+    });
+
+    fileObj.editedBadge = editedBadge;
     fileObj.el = wrap;
     fileObj.img = img;
     fileObj.badge = badge;
@@ -1443,7 +1705,7 @@
     } else {
       const url = URL.createObjectURL(fileObj.src);
       thumbObjectUrls.push(url);
-      img.src = url;
+      setBaseThumb(fileObj, url);
     }
   }
 
@@ -1801,9 +2063,10 @@
     const m = e.data;
     try {
       if (m.op === 'thumb') {
-        const d = await decodeHeic(m.buffer, true);
+        // full: decode the real image (editor / viewer preview); otherwise use the tiny embedded thumbnail
+        const d = await decodeHeic(m.buffer, !m.full);
         const s = Math.min(1, m.size / Math.max(d.w, d.h));
-        const blob = await encode(d.source, Math.max(1, Math.round(d.w * s)), Math.max(1, Math.round(d.h * s)), 'image/jpeg', 0.7, true);
+        const blob = await encode(d.source, Math.max(1, Math.round(d.w * s)), Math.max(1, Math.round(d.h * s)), 'image/jpeg', m.q || 0.7, true);
         self.postMessage({ id: m.id, blob: blob });
         return;
       }
@@ -1815,8 +2078,18 @@
         source = await createImageBitmap(new Blob([m.buffer], { type: m.mime }));
         w = source.width; h = source.height;
       }
-      const t = targetSize(w, h, m);
-      const blob = await encode(source, t.w, t.h, m.outMime, m.quality, m.outMime === 'image/jpeg');
+      const edit = m.edit || null;
+      const cd = cropDims(w, h, edit);
+      const t = targetSize(cd.w, cd.h, m);
+      let blob;
+      if (edit) {
+        // crop / perspective / annotations: shared code, injected from the main script
+        const cv = renderEdited(source, w, h, t, edit, (cw, ch) => new OffscreenCanvas(cw, ch));
+        if (source.close) source.close();
+        blob = await cv.convertToBlob({ type: m.outMime, quality: m.quality });
+      } else {
+        blob = await encode(source, t.w, t.h, m.outMime, m.quality, m.outMime === 'image/jpeg');
+      }
       self.postMessage({ id: m.id, blob: blob, w: t.w, h: t.h });
     } catch (err) {
       self.postMessage({ id: m.id, error: (err && err.message) ? err.message : String(err) });
@@ -1827,7 +2100,9 @@
   let workerUrl = null;
   function getWorkerUrl() {
     if (!workerUrl) {
-      const src = "importScripts('" + LIBHEIF_URL + "');\n" + WORKER_BODY;
+      // The edit functions are written once in this file and copied into the worker as source text.
+      const shared = [cropDims, warpQuad, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
+      const src = "importScripts('" + LIBHEIF_URL + "');\n" + shared + "\n" + WORKER_BODY;
       workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
     }
     return workerUrl;
@@ -1908,7 +2183,8 @@
       msg: {
         id: i, op: 'convert', buffer,
         heic: fileObj.isHeic, mime: fileObj.type, outMime: OUTPUT_MIME,
-        scaleMode, scale: currentScale, boxLong, boxShort, quality: currentQuality
+        scaleMode, scale: currentScale, boxLong, boxShort, quality: currentQuality,
+        edit: exportEdit(fileObj)
       },
       transfer: [buffer]
     };
@@ -1934,7 +2210,7 @@
         } else if (f.el && f.el.isConnected) {
           const url = URL.createObjectURL(data.blob);
           thumbObjectUrls.push(url);
-          f.img.src = url;
+          setBaseThumb(f, url);
         }
       }
     );
@@ -1971,7 +2247,7 @@
           if (blob && fileObj.el && fileObj.el.isConnected) {
             const url = URL.createObjectURL(blob);
             thumbObjectUrls.push(url);
-            fileObj.img.src = url;
+            setBaseThumb(fileObj, url);
           }
           thumbCanvas.width = 0;
           thumbCanvas.height = 0;
@@ -2117,7 +2393,25 @@
     const opaque = true;             // JPEG has no alpha: flatten onto white
     let finalBlob = null;
 
-    if (isHeic) {
+    const edit = exportEdit(fileObj);
+    if (edit) {
+      /* Cropped / perspective-corrected / annotated: render through the shared edit code. */
+      let source, sw, sh;
+      if (isHeic) {
+        const buffer = await fileObj.src.arrayBuffer();
+        const d = await decodeHeicBufferToCanvas(buffer);
+        source = d.canvas; sw = d.width; sh = d.height;
+      } else {
+        source = await createImageBitmap(fileObj.src);
+        sw = source.width; sh = source.height;
+      }
+      const cd = cropDims(sw, sh, edit);
+      const target = computeTarget(cd.w, cd.h);
+      const out = renderEdited(source, sw, sh, target, edit, makeMainCanvas);
+      if (source.close) source.close(); else { source.width = 0; source.height = 0; }
+      finalBlob = await canvasToBlob(out, targetMime, currentQuality);
+      out.width = 0; out.height = 0;
+    } else if (isHeic) {
       const buffer = await fileObj.src.arrayBuffer();
       const { canvas, width, height } = await decodeHeicBufferToCanvas(buffer);
       const target = computeTarget(width, height);
@@ -2324,6 +2618,994 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Photo editing: shared render code
+   *
+   * cropDims, warpQuad, drawAnnotations and renderEdited are copied into the
+   * Web Workers as source text (see getWorkerUrl), so they may only use their
+   * own arguments: no outer variables and no DOM.
+   *
+   * An edit is { quad, annos }:
+   *   quad  - four corners (TL, TR, BR, BL) in 0..1 of the source photo, or null
+   *   annos - shapes in 0..1 of the cropped result
+   * ------------------------------------------------------------------ */
+  function cropDims(w, h, edit) {
+    if (!edit || !edit.quad) return { w: w, h: h };
+    const q = edit.quad.map(function (p) { return { x: p.x * w, y: p.y * h }; });
+    const d = function (a, b) { return Math.hypot(a.x - b.x, a.y - b.y); };
+    return {
+      w: Math.max(1, Math.round((d(q[0], q[1]) + d(q[3], q[2])) / 2)),
+      h: Math.max(1, Math.round((d(q[0], q[3]) + d(q[1], q[2])) / 2))
+    };
+  }
+
+  /* Perspective warp: fills dst with the quad `pts` (pixel coords inside src), bilinear. */
+  function warpQuad(src, pts, dst) {
+    const sw = src.width, sh = src.height, dw = dst.width, dh = dst.height;
+    const sd = src.data, od = dst.data;
+    const x0 = pts[0].x, y0 = pts[0].y, x1 = pts[1].x, y1 = pts[1].y;
+    const x2 = pts[2].x, y2 = pts[2].y, x3 = pts[3].x, y3 = pts[3].y;
+    // Unit square -> quad projective mapping (Heckbert).
+    const dx1 = x1 - x2, dx2 = x3 - x2, sx = x0 - x1 + x2 - x3;
+    const dy1 = y1 - y2, dy2 = y3 - y2, sy = y0 - y1 + y2 - y3;
+    const den = dx1 * dy2 - dx2 * dy1;
+    let g = 0, k = 0;
+    if ((Math.abs(sx) > 1e-9 || Math.abs(sy) > 1e-9) && Math.abs(den) > 1e-12) {
+      g = (sx * dy2 - dx2 * sy) / den;
+      k = (dx1 * sy - sx * dy1) / den;
+    }
+    const a = x1 - x0 + g * x1, b = x3 - x0 + k * x3, c = x0;
+    const d = y1 - y0 + g * y1, e = y3 - y0 + k * y3, f = y0;
+    for (let y = 0; y < dh; y++) {
+      const v = (y + 0.5) / dh;
+      for (let x = 0; x < dw; x++) {
+        const u = (x + 0.5) / dw;
+        const wgt = g * u + k * v + 1;
+        const X = (a * u + b * v + c) / wgt - 0.5;
+        const Y = (d * u + e * v + f) / wgt - 0.5;
+        const o = (y * dw + x) * 4;
+        if (!(X > -1 && Y > -1 && X < sw && Y < sh)) {      // outside the photo: white
+          od[o] = 255; od[o + 1] = 255; od[o + 2] = 255; od[o + 3] = 255;
+          continue;
+        }
+        let ix = Math.floor(X), iy = Math.floor(Y);
+        const fx = X - ix, fy = Y - iy;
+        let jx = ix + 1, jy = iy + 1;
+        if (ix < 0) ix = 0; else if (ix > sw - 1) ix = sw - 1;
+        if (jx < 0) jx = 0; else if (jx > sw - 1) jx = sw - 1;
+        if (iy < 0) iy = 0; else if (iy > sh - 1) iy = sh - 1;
+        if (jy < 0) jy = 0; else if (jy > sh - 1) jy = sh - 1;
+        const i00 = (iy * sw + ix) * 4, i10 = (iy * sw + jx) * 4;
+        const i01 = (jy * sw + ix) * 4, i11 = (jy * sw + jx) * 4;
+        const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+        od[o]     = sd[i00]     * w00 + sd[i10]     * w10 + sd[i01]     * w01 + sd[i11]     * w11;
+        od[o + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
+        od[o + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
+        od[o + 3] = 255;
+      }
+    }
+  }
+
+  /* Arrows, ellipses and text. Sizes are relative to the shorter side, so the
+     picture looks the same at any resolution. */
+  function drawAnnotations(ctx, w, h, annos) {
+    const short = Math.min(w, h);
+    const LW = [0.005, 0.009, 0.015];
+    const FS = [0.035, 0.055, 0.085];
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    annos.forEach(function (a) {
+      const si = a.s >= 0 && a.s <= 2 ? a.s : 1;
+      const lw = Math.max(2, short * LW[si]);
+      ctx.strokeStyle = a.c;
+      ctx.fillStyle = a.c;
+      ctx.lineWidth = lw;
+      if (a.t === 'arrow') {
+        const x1 = a.x1 * w, y1 = a.y1 * h, x2 = a.x2 * w, y2 = a.y2 * h;
+        const ang = Math.atan2(y2 - y1, x2 - x1);
+        const head = Math.max(lw * 4.5, short * 0.03);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2 - Math.cos(ang) * head * 0.6, y2 - Math.sin(ang) * head * 0.6);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(ang - 0.4), y2 - head * Math.sin(ang - 0.4));
+        ctx.lineTo(x2 - head * Math.cos(ang + 0.4), y2 - head * Math.sin(ang + 0.4));
+        ctx.closePath();
+        ctx.fill();
+      } else if (a.t === 'ellipse') {
+        const cx = (a.x1 + a.x2) / 2 * w, cy = (a.y1 + a.y2) / 2 * h;
+        const rx = Math.max(1, Math.abs(a.x2 - a.x1) / 2 * w), ry = Math.max(1, Math.abs(a.y2 - a.y1) / 2 * h);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (a.t === 'text' && a.text) {
+        const fs = Math.max(10, short * FS[si]);
+        ctx.font = 'bold ' + fs + 'px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const tw = ctx.measureText(a.text).width;
+        const pad = fs * 0.3;
+        const lo = tw / 2 + pad, hi = w - tw / 2 - pad;
+        const tx = lo > hi ? w / 2 : Math.max(lo, Math.min(hi, a.x * w));
+        const ty = Math.max(fs / 2, Math.min(h - fs / 2, a.y * h));
+        const lum = parseInt(a.c.slice(1, 3), 16) * 0.299 + parseInt(a.c.slice(3, 5), 16) * 0.587 + parseInt(a.c.slice(5, 7), 16) * 0.114;
+        ctx.lineWidth = fs * 0.16;
+        ctx.strokeStyle = lum > 140 ? '#000000' : '#ffffff';
+        ctx.strokeText(a.text, tx, ty);
+        ctx.fillText(a.text, tx, ty);
+      }
+    });
+    ctx.restore();
+  }
+
+  /* Crops / corrects perspective, then draws annotations. Returns a canvas of size t. */
+  function renderEdited(source, sw, sh, t, edit, makeCanvas) {
+    const out = makeCanvas(t.w, t.h);
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, t.w, t.h);
+    if (edit && edit.quad) {
+      const cd = cropDims(sw, sh, edit);
+      // Warp from a copy at most ~2x the output size: the bilinear lookup then
+      // stays sharp without aliasing, and memory stays small.
+      const r = Math.min(1, (2 * t.w) / cd.w, (2 * t.h) / cd.h);
+      const iw = Math.max(1, Math.round(sw * r)), ih = Math.max(1, Math.round(sh * r));
+      const tmp = makeCanvas(iw, ih);
+      const tctx = tmp.getContext('2d', { willReadFrequently: true });
+      tctx.fillStyle = '#ffffff';
+      tctx.fillRect(0, 0, iw, ih);
+      tctx.imageSmoothingEnabled = true;
+      tctx.imageSmoothingQuality = 'high';
+      tctx.drawImage(source, 0, 0, iw, ih);
+      const src = tctx.getImageData(0, 0, iw, ih);
+      const pts = edit.quad.map(function (p) { return { x: p.x * iw, y: p.y * ih }; });
+      const dst = ctx.createImageData(t.w, t.h);
+      warpQuad(src, pts, dst);
+      ctx.putImageData(dst, 0, 0);
+      tmp.width = 0; tmp.height = 0;
+    } else {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(source, 0, 0, t.w, t.h);
+    }
+    if (edit && edit.annos && edit.annos.length) drawAnnotations(ctx, t.w, t.h, edit.annos);
+    return out;
+  }
+
+  function makeMainCanvas(w, h) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    return c;
+  }
+
+  /* What gets sent to the converter: null when the photo has no edit. */
+  function exportEdit(fileObj) {
+    const e = fileObj.edit;
+    if (!e || (!e.quad && !(e.annos && e.annos.length))) return null;
+    return { quad: e.quad || null, annos: e.annos || [] };
+  }
+
+  /* Keeps the original thumbnail so Reset can bring it back. */
+  function setBaseThumb(fileObj, url) {
+    fileObj.baseThumb = url;
+    if (!fileObj.edit && fileObj.img) fileObj.img.src = url;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Previews: a screen-sized copy of each photo for the viewer and editor
+   * ------------------------------------------------------------------ */
+  const PREVIEW_MAX = 2048;
+
+  async function heicPreviewBlob(fileObj) {
+    if (WORKERS_OK) {
+      try {
+        return await new Promise((resolve, reject) => {
+          runPool(
+            1, 1,
+            async () => {
+              const buffer = await fileObj.src.arrayBuffer();
+              return { msg: { id: 0, op: 'thumb', buffer, size: PREVIEW_MAX, full: true, q: 0.85 }, transfer: [buffer] };
+            },
+            (i, data) => {
+              if (data.error || !data.blob) reject(new Error(data.error || 'Could not decode this HEIC image.'));
+              else resolve(data.blob);
+            }
+          ).catch(reject);
+        });
+      } catch (err) {
+        console.warn('Worker HEIC preview failed, trying the main thread', err);
+      }
+    }
+    const buffer = await fileObj.src.arrayBuffer();
+    const { canvas, width, height } = await decodeHeicBufferToCanvas(buffer);
+    const s = Math.min(1, PREVIEW_MAX / Math.max(width, height));
+    const out = paintToCanvas(canvas, Math.max(1, Math.round(width * s)), Math.max(1, Math.round(height * s)), true);
+    canvas.width = 0; canvas.height = 0;
+    const blob = await canvasToBlob(out, 'image/jpeg', 0.85);
+    out.width = 0; out.height = 0;
+    return blob;
+  }
+
+  function getPreviewBlob(fileObj) {
+    if (!fileObj.isHeic) return Promise.resolve(fileObj.src);
+    if (!fileObj.pvPromise) {
+      fileObj.pvPromise = heicPreviewBlob(fileObj).catch(err => { fileObj.pvPromise = null; throw err; });
+    }
+    return fileObj.pvPromise;
+  }
+
+  async function getPreviewBitmap(fileObj, maxDim) {
+    const blob = await getPreviewBlob(fileObj);
+    const probe = await createImageBitmap(blob);
+    const s = Math.min(1, maxDim / Math.max(probe.width, probe.height));
+    if (s >= 1) return probe;
+    const w = Math.max(1, Math.round(probe.width * s));
+    const h = Math.max(1, Math.round(probe.height * s));
+    probe.close();
+    try {
+      return await createImageBitmap(blob, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
+    } catch (e) {
+      return createImageBitmap(blob);
+    }
+  }
+
+  /* The photo with its edits applied, fitted inside maxDim. */
+  async function renderEditedCanvas(fileObj, maxDim) {
+    const edit = exportEdit(fileObj);
+    const bmp = await getPreviewBitmap(fileObj, PREVIEW_MAX);
+    try {
+      const cd = cropDims(bmp.width, bmp.height, edit);
+      const k = Math.min(1, maxDim / Math.max(cd.w, cd.h));
+      const t = { w: Math.max(1, Math.round(cd.w * k)), h: Math.max(1, Math.round(cd.h * k)) };
+      return renderEdited(bmp, bmp.width, bmp.height, t, edit, makeMainCanvas);
+    } finally {
+      bmp.close();
+    }
+  }
+
+  /* Updates the grid thumbnail and its pencil badge after an edit. */
+  async function refreshThumb(fileObj) {
+    const on = !!exportEdit(fileObj);
+    if (fileObj.editedBadge) fileObj.editedBadge.classList.toggle('on', on);
+    if (!fileObj.img) return;
+    if (!on) {
+      if (fileObj.baseThumb) fileObj.img.src = fileObj.baseThumb;
+      return;
+    }
+    try {
+      const cv = await renderEditedCanvas(fileObj, 240);
+      const blob = await canvasToBlob(cv, 'image/jpeg', 0.75);
+      cv.width = 0; cv.height = 0;
+      if (!fileObj.el || !fileObj.el.isConnected || !exportEdit(fileObj)) return;
+      if (fileObj.editThumbUrl) URL.revokeObjectURL(fileObj.editThumbUrl);
+      fileObj.editThumbUrl = URL.createObjectURL(blob);
+      thumbObjectUrls.push(fileObj.editThumbUrl);
+      fileObj.img.src = fileObj.editThumbUrl;
+    } catch (err) {
+      console.warn('Edited thumbnail failed', err);
+    }
+  }
+
+  function setTitle(el, main, sub) {
+    el.firstChild.textContent = main;
+    el.querySelector('small').textContent = sub || '';
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Full-screen viewer: pinch / wheel zoom, drag to pan, double-tap, swipe
+   * ------------------------------------------------------------------ */
+  const viewerEl = document.getElementById('viewer');
+  const viewerStage = document.getElementById('viewerStage');
+  const viewerImg = document.getElementById('viewerImg');
+  const viewerMsg = document.getElementById('viewerMsg');
+  const viewerTitle = document.getElementById('viewerTitle');
+  const viewerPrev = document.getElementById('viewerPrev');
+  const viewerNext = document.getElementById('viewerNext');
+  const V = { index: 0, s: 1, tx: 0, ty: 0, url: null, token: 0, ptrs: new Map(), g: null, lastTap: 0 };
+
+  function viewerApply() {
+    viewerImg.style.transform = `translate(${V.tx}px, ${V.ty}px) scale(${V.s})`;
+  }
+
+  function viewerClamp() {
+    const cw = viewerStage.clientWidth, ch = viewerStage.clientHeight;
+    const nw = viewerImg.naturalWidth || cw, nh = viewerImg.naturalHeight || ch;
+    const fit = Math.min(cw / nw, ch / nh);
+    const mx = Math.max(0, (nw * fit * V.s - cw) / 2);
+    const my = Math.max(0, (nh * fit * V.s - ch) / 2);
+    V.tx = Math.min(mx, Math.max(-mx, V.tx));
+    V.ty = Math.min(my, Math.max(-my, V.ty));
+  }
+
+  function viewerReset() {
+    V.s = 1; V.tx = 0; V.ty = 0;
+    viewerApply();
+  }
+
+  /* px, py are relative to the centre of the stage. */
+  function viewerZoomAt(ns, px, py) {
+    ns = Math.min(8, Math.max(1, ns));
+    const k = ns / V.s;
+    V.tx = px - (px - V.tx) * k;
+    V.ty = py - (py - V.ty) * k;
+    V.s = ns;
+    viewerClamp();
+    viewerApply();
+  }
+
+  function stagePoint(clientX, clientY) {
+    const r = viewerStage.getBoundingClientRect();
+    return { x: clientX - r.left - r.width / 2, y: clientY - r.top - r.height / 2 };
+  }
+
+  viewerStage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.viewer-nav')) return;
+    try { viewerStage.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    V.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (V.ptrs.size === 1) {
+      V.g = { x: e.clientX, y: e.clientY, tx: V.tx, ty: V.ty, moved: false };
+    } else if (V.ptrs.size === 2) {
+      const [a, b] = Array.from(V.ptrs.values());
+      const m = stagePoint((a.x + b.x) / 2, (a.y + b.y) / 2);
+      V.g = { pinch: true, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, s: V.s, mx: m.x, my: m.y, tx: V.tx, ty: V.ty };
+    }
+  });
+
+  viewerStage.addEventListener('pointermove', (e) => {
+    if (!V.ptrs.has(e.pointerId)) return;
+    V.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const g = V.g;
+    if (!g) return;
+    if (g.pinch && V.ptrs.size >= 2) {
+      const [a, b] = Array.from(V.ptrs.values());
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const m = stagePoint((a.x + b.x) / 2, (a.y + b.y) / 2);
+      const ns = Math.min(8, Math.max(1, g.s * dist / g.dist));
+      const k = ns / g.s;
+      V.s = ns;
+      V.tx = m.x - (g.mx - g.tx) * k;      // the point under the fingers stays put
+      V.ty = m.y - (g.my - g.ty) * k;
+      viewerClamp();
+      viewerApply();
+    } else if (!g.pinch) {
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (Math.hypot(dx, dy) > 8) g.moved = true;
+      if (V.s > 1) {
+        V.tx = g.tx + dx;
+        V.ty = g.ty + dy;
+        viewerClamp();
+        viewerApply();
+      }
+    }
+  });
+
+  function viewerPointerEnd(e) {
+    if (!V.ptrs.has(e.pointerId)) return;
+    const g = V.g;
+    V.ptrs.delete(e.pointerId);
+    if (V.ptrs.size === 0 && g && !g.pinch) {
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.moved) {
+        const now = Date.now();
+        if (now - V.lastTap < 300) {            // double tap / double click
+          const p = stagePoint(e.clientX, e.clientY);
+          viewerZoomAt(V.s > 1 ? 1 : 2.5, p.x, p.y);
+          V.lastTap = 0;
+        } else {
+          V.lastTap = now;
+        }
+      } else if (e.type === 'pointerup' && V.s === 1 && Math.abs(dx) > 60 && Math.abs(dy) < 80) {
+        viewerStep(dx < 0 ? 1 : -1);            // swipe
+      }
+      V.g = null;
+    } else if (V.ptrs.size === 1) {
+      const p = Array.from(V.ptrs.values())[0];  // one finger left after a pinch: keep panning
+      V.g = { x: p.x, y: p.y, tx: V.tx, ty: V.ty, moved: true };
+    } else if (V.ptrs.size === 0) {
+      V.g = null;
+    }
+  }
+  viewerStage.addEventListener('pointerup', viewerPointerEnd);
+  viewerStage.addEventListener('pointercancel', viewerPointerEnd);
+
+  viewerStage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const p = stagePoint(e.clientX, e.clientY);
+    viewerZoomAt(V.s * Math.exp(-e.deltaY * 0.0015), p.x, p.y);
+  }, { passive: false });
+
+  async function showViewerImage() {
+    const f = selectedFiles[V.index];
+    if (!f) { closeViewer(); return; }
+    const tok = ++V.token;
+    const edited = !!exportEdit(f);
+    setTitle(viewerTitle, f.name,
+      `${V.index + 1} / ${selectedFiles.length} · ${formatBytes(f.size)}${edited ? ' · edited' : ''}`);
+    viewerPrev.disabled = V.index === 0;
+    viewerNext.disabled = V.index === selectedFiles.length - 1;
+    viewerMsg.textContent = 'Loading…';
+    viewerImg.style.visibility = 'hidden';
+    viewerReset();
+
+    let url;
+    try {
+      if (edited) {
+        const cv = await renderEditedCanvas(f, PREVIEW_MAX);
+        const blob = await canvasToBlob(cv, 'image/jpeg', 0.9);
+        cv.width = 0; cv.height = 0;
+        url = URL.createObjectURL(blob);
+      } else if (f.isHeic) {
+        url = URL.createObjectURL(await getPreviewBlob(f));
+      } else {
+        url = URL.createObjectURL(f.src);
+      }
+    } catch (err) {
+      console.error('Viewer load failed:', f.name, err);
+      if (tok === V.token) viewerMsg.textContent = 'Could not load this photo.';
+      return;
+    }
+    if (tok !== V.token) { URL.revokeObjectURL(url); return; }
+    if (V.url) URL.revokeObjectURL(V.url);
+    V.url = url;
+    viewerImg.onload = () => {
+      if (tok !== V.token) return;
+      viewerMsg.textContent = '';
+      viewerImg.style.visibility = 'visible';
+      viewerReset();
+    };
+    viewerImg.onerror = () => { if (tok === V.token) viewerMsg.textContent = 'Could not display this photo.'; };
+    viewerImg.src = url;
+  }
+
+  function openViewer(index) {
+    V.index = index;
+    viewerEl.hidden = false;
+    document.body.style.overflow = 'hidden';
+    showViewerImage();
+  }
+
+  function closeViewer() {
+    viewerEl.hidden = true;
+    V.token++;
+    if (V.url) { URL.revokeObjectURL(V.url); V.url = null; }
+    viewerImg.removeAttribute('src');
+    document.body.style.overflow = '';
+  }
+
+  function viewerStep(d) {
+    const n = V.index + d;
+    if (n < 0 || n >= selectedFiles.length) return;
+    V.index = n;
+    showViewerImage();
+  }
+
+  document.getElementById('viewerClose').addEventListener('click', closeViewer);
+  viewerPrev.addEventListener('click', () => viewerStep(-1));
+  viewerNext.addEventListener('click', () => viewerStep(1));
+  document.getElementById('viewerEdit').addEventListener('click', () => {
+    const f = selectedFiles[V.index];
+    if (f) openEditor(f);
+  });
+
+  /* ------------------------------------------------------------------ *
+   * Editor: crop + straighten + perspective, and annotations
+   *
+   * The crop is four draggable corners (TL, TR, BR, BL). The page inside
+   * them is stretched to a rectangle, which straightens and de-skews it.
+   * The Straighten slider turns the crop frame around the photo's centre.
+   * ------------------------------------------------------------------ */
+  const editorEl = document.getElementById('editor');
+  const edStage = document.getElementById('edStage');
+  const edCanvas = document.getElementById('edCanvas');
+  const edCtx = edCanvas.getContext('2d');
+  const edTitle = document.getElementById('edTitle');
+  const edAngleInput = document.getElementById('edAngle');
+  const edAngleVal = document.getElementById('edAngleVal');
+  const edToolsCrop = document.getElementById('edToolsCrop');
+  const edToolsAnno = document.getElementById('edToolsAnno');
+  const edTextRow = document.getElementById('edTextRow');
+  const edTextInput = document.getElementById('edTextInput');
+  const edTabCrop = document.getElementById('edTabCrop');
+  const edTabAnno = document.getElementById('edTabAnno');
+  const edSizeBtn = document.getElementById('edSize');
+
+  const ED_COLORS = ['#ff3b30', '#ffcc00', '#0a84ff', '#ffffff', '#000000'];
+  const ED_SIZE_NAMES = ['S', 'M', 'L'];
+  const fullQuad = () => [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+  const clamp01 = (n) => Math.min(1, Math.max(0, n));
+
+  const ED = {
+    token: 0, file: null, bmp: null, bw: 0, bh: 0, tab: 'crop',
+    base: fullQuad(), angle: 0,
+    annos: [], annoKey: '',
+    tool: 'arrow', color: ED_COLORS[0], size: 1,
+    baseCanvas: null, baseKey: '',
+    rect: { x: 0, y: 0, w: 1, h: 1 }, cw: 1, ch: 1, dpr: 1,
+    drag: null, temp: null, textPos: null
+  };
+
+  /* Rotate a 0..1 point about the photo centre, measured in real pixels so shapes stay square. */
+  function edRot(p, rad) {
+    const x = (p.x - 0.5) * ED.bw, y = (p.y - 0.5) * ED.bh;
+    const c = Math.cos(rad), s = Math.sin(rad);
+    return { x: (x * c - y * s) / ED.bw + 0.5, y: (x * s + y * c) / ED.bh + 0.5 };
+  }
+  /* Positive slider = the photo turns clockwise, so the frame turns the other way. */
+  const edFrameRad = () => -ED.angle * Math.PI / 180;
+  const edQuad = () => ED.base.map(p => edRot(p, edFrameRad()));
+
+  function edIsFull() {
+    if (Math.abs(ED.angle) > 1e-6) return false;
+    const f = fullQuad();
+    return ED.base.every((p, i) => Math.abs(p.x - f[i].x) < 1e-4 && Math.abs(p.y - f[i].y) < 1e-4);
+  }
+
+  function edQuadKey() {
+    return edIsFull() ? 'full' : edQuad().map(p => p.x.toFixed(4) + ',' + p.y.toFixed(4)).join(';');
+  }
+
+  /* Rejects shapes that fold over themselves or collapse. */
+  function edConvex(q) {
+    const minCross = ED.bw * ED.bh * 0.0004;
+    for (let i = 0; i < 4; i++) {
+      const a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+      const cr = ((b.x - a.x) * ED.bw) * ((c.y - b.y) * ED.bh) - ((b.y - a.y) * ED.bh) * ((c.x - b.x) * ED.bw);
+      if (cr <= minCross) return false;
+    }
+    return true;
+  }
+
+  function edInside(poly, p) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const a = poly[i], b = poly[j];
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+
+  function edResize() {
+    ED.dpr = window.devicePixelRatio || 1;
+    ED.cw = Math.max(1, edStage.clientWidth);
+    ED.ch = Math.max(1, edStage.clientHeight);
+    edCanvas.width = Math.round(ED.cw * ED.dpr);
+    edCanvas.height = Math.round(ED.ch * ED.dpr);
+  }
+
+  function edFit(iw, ih, margin) {
+    const aw = Math.max(10, ED.cw - 2 * margin), ah = Math.max(10, ED.ch - 2 * margin);
+    const s = Math.min(aw / iw, ah / ih);
+    const w = iw * s, h = ih * s;
+    return { x: (ED.cw - w) / 2, y: (ED.ch - h) / 2, w: w, h: h };
+  }
+
+  function edRender() {
+    if (editorEl.hidden) return;
+    const ctx = edCtx;
+    ctx.setTransform(ED.dpr, 0, 0, ED.dpr, 0, 0);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, ED.cw, ED.ch);
+    if (!ED.bmp) {
+      ctx.fillStyle = '#8e8e93';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Loading…', ED.cw / 2, ED.ch / 2);
+      return;
+    }
+    if (ED.tab === 'crop') edRenderCrop(ctx); else edRenderAnno(ctx);
+  }
+
+  function edRenderCrop(ctx) {
+    const r = ED.rect = edFit(ED.bw, ED.bh, 28);
+    ctx.drawImage(ED.bmp, r.x, r.y, r.w, r.h);
+    const q = edQuad().map(p => ({ x: r.x + p.x * r.w, y: r.y + p.y * r.h }));
+
+    ctx.save();                                   // dim everything outside the crop
+    ctx.beginPath();
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.moveTo(q[0].x, q[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(q[i].x, q[i].y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';   // thirds guide
+    ctx.lineWidth = 1;
+    [1 / 3, 2 / 3].forEach(t => {
+      const a = lerp(q[0], q[1], t), b = lerp(q[3], q[2], t);
+      const c = lerp(q[0], q[3], t), d = lerp(q[1], q[2], t);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.moveTo(c.x, c.y); ctx.lineTo(d.x, d.y);
+      ctx.stroke();
+    });
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(q[0].x, q[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(q[i].x, q[i].y);
+    ctx.closePath();
+    ctx.stroke();
+    q.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#3880ff';
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  function edRenderAnno(ctx) {
+    const c = ED.baseCanvas;
+    if (!c) return;
+    const r = ED.rect = edFit(c.width, c.height, 8);
+    ctx.drawImage(c, r.x, r.y, r.w, r.h);
+    const list = ED.temp ? ED.annos.concat([ED.temp]) : ED.annos;
+    ctx.save();
+    ctx.translate(r.x, r.y);
+    ctx.beginPath();
+    ctx.rect(0, 0, r.w, r.h);
+    ctx.clip();
+    drawAnnotations(ctx, r.w, r.h, list);
+    ctx.restore();
+    if (ED.textPos) {                              // small cross where the text will go
+      const x = r.x + ED.textPos.x * r.w, y = r.y + ED.textPos.y * r.h;
+      ctx.save();
+      ctx.strokeStyle = '#3880ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y);
+      ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  /* The cropped picture that annotations are drawn on (at most 1600 px). */
+  function edBuildBase() {
+    const key = edQuadKey();
+    if (ED.baseCanvas && ED.baseKey === key) return;
+    const edit = edIsFull() ? null : { quad: edQuad() };
+    const cd = cropDims(ED.bw, ED.bh, edit);
+    const k = Math.min(1, 1600 / Math.max(cd.w, cd.h));
+    const t = { w: Math.max(1, Math.round(cd.w * k)), h: Math.max(1, Math.round(cd.h * k)) };
+    ED.baseCanvas = renderEdited(ED.bmp, ED.bw, ED.bh, t, edit, makeMainCanvas);
+    ED.baseKey = key;
+  }
+
+  function edPoint(e) {
+    const r = edCanvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function edCropDown(p) {
+    const r = ED.rect;
+    const q = edQuad().map(pt => ({ x: r.x + pt.x * r.w, y: r.y + pt.y * r.h }));
+    let best = -1, bestDist = 36;
+    q.forEach((pt, i) => {
+      const d = Math.hypot(pt.x - p.x, pt.y - p.y);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    if (best >= 0) ED.drag = { mode: 'corner', i: best };
+    else if (edInside(q, p)) ED.drag = { mode: 'move', start: p, orig: edQuad() };
+    else ED.drag = null;
+  }
+
+  function edCropMove(p) {
+    const d = ED.drag, r = ED.rect;
+    if (!d) return;
+    if (d.mode === 'corner') {
+      const np = { x: clamp01((p.x - r.x) / r.w), y: clamp01((p.y - r.y) / r.h) };
+      const disp = edQuad();
+      disp[d.i] = np;
+      if (!edConvex(disp)) return;
+      ED.base[d.i] = edRot(np, -edFrameRad());
+    } else {
+      let dx = (p.x - d.start.x) / r.w, dy = (p.y - d.start.y) / r.h;
+      const xs = d.orig.map(q => q.x), ys = d.orig.map(q => q.y);
+      const loX = -Math.min.apply(null, xs), hiX = 1 - Math.max.apply(null, xs);
+      const loY = -Math.min.apply(null, ys), hiY = 1 - Math.max.apply(null, ys);
+      if (loX <= hiX) dx = Math.min(hiX, Math.max(loX, dx));
+      if (loY <= hiY) dy = Math.min(hiY, Math.max(loY, dy));
+      ED.base = d.orig.map(q => edRot({ x: q.x + dx, y: q.y + dy }, -edFrameRad()));
+    }
+    edRender();
+  }
+
+  function edAnnoPoint(p) {
+    const r = ED.rect;
+    return { x: clamp01((p.x - r.x) / r.w), y: clamp01((p.y - r.y) / r.h) };
+  }
+
+  function edUpdateTextTemp() {
+    const text = edTextInput.value.trim();
+    ED.temp = (ED.textPos && text)
+      ? { t: 'text', x: ED.textPos.x, y: ED.textPos.y, text: text, c: ED.color, s: ED.size }
+      : null;
+  }
+
+  function edAnnoDown(p) {
+    const n = edAnnoPoint(p);
+    if (ED.tool === 'text') {
+      ED.textPos = n;
+      edUpdateTextTemp();
+      edRender();
+      edTextInput.focus();
+      return;
+    }
+    ED.drag = { mode: 'draw' };
+    ED.temp = { t: ED.tool, x1: n.x, y1: n.y, x2: n.x, y2: n.y, c: ED.color, s: ED.size };
+  }
+
+  function edAnnoMove(p) {
+    if (!ED.drag || ED.drag.mode !== 'draw' || !ED.temp) return;
+    const n = edAnnoPoint(p);
+    ED.temp.x2 = n.x;
+    ED.temp.y2 = n.y;
+    edRender();
+  }
+
+  function edAnnoUp() {
+    if (!ED.drag || ED.drag.mode !== 'draw' || !ED.temp) return;
+    const a = ED.temp, r = ED.rect;
+    ED.temp = null;
+    if (Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h) > 10) {
+      if (!ED.annos.length) ED.annoKey = edQuadKey();
+      ED.annos.push(a);
+    }
+    edRender();
+  }
+
+  edCanvas.addEventListener('pointerdown', (e) => {
+    if (!ED.bmp) return;
+    try { edCanvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    const p = edPoint(e);
+    if (ED.tab === 'crop') edCropDown(p); else edAnnoDown(p);
+  });
+  edCanvas.addEventListener('pointermove', (e) => {
+    if (!ED.bmp) return;
+    const p = edPoint(e);
+    if (ED.tab === 'crop') edCropMove(p); else edAnnoMove(p);
+  });
+  const edPointerEnd = () => {
+    if (ED.tab === 'anno') edAnnoUp();
+    ED.drag = null;
+  };
+  edCanvas.addEventListener('pointerup', edPointerEnd);
+  edCanvas.addEventListener('pointercancel', edPointerEnd);
+
+  /* Straighten slider */
+  edAngleInput.addEventListener('input', () => {
+    ED.angle = parseFloat(edAngleInput.value) || 0;
+    edAngleVal.textContent = ED.angle.toFixed(1) + '°';
+    edRender();
+  });
+
+  function edSetAngle(v) {
+    ED.angle = v;
+    edAngleInput.value = String(v);
+    edAngleVal.textContent = v.toFixed(1) + '°';
+  }
+
+  document.getElementById('edFull').addEventListener('click', () => {
+    ED.base = fullQuad();
+    edSetAngle(0);
+    edRender();
+  });
+
+  document.getElementById('edResetAll').addEventListener('click', () => {
+    if (ED.annos.length && !confirm('Remove the crop and all annotations?')) return;
+    ED.base = fullQuad();
+    edSetAngle(0);
+    ED.annos = [];
+    ED.annoKey = '';
+    ED.temp = null;
+    ED.textPos = null;
+    ED.baseCanvas = null;
+    edRender();
+  });
+
+  /* Annotation tools */
+  function edSetTool(tool) {
+    ED.tool = tool;
+    document.querySelectorAll('#edToolsAnno [data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+    edTextRow.hidden = tool !== 'text';
+    if (tool !== 'text') { ED.textPos = null; ED.temp = null; }
+    edResizeSoon();
+    edRender();
+  }
+
+  document.querySelectorAll('#edToolsAnno [data-tool]').forEach(b => {
+    b.addEventListener('click', () => edSetTool(b.dataset.tool));
+  });
+
+  const edColorsRow = document.getElementById('edColors');
+  ED_COLORS.forEach(color => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ed-swatch' + (color === ED.color ? ' active' : '');
+    b.style.background = color;
+    b.setAttribute('aria-label', 'Colour ' + color);
+    b.addEventListener('click', () => {
+      ED.color = color;
+      edColorsRow.querySelectorAll('.ed-swatch').forEach(s => s.classList.toggle('active', s === b));
+      edUpdateTextTemp();
+      edRender();
+    });
+    edColorsRow.appendChild(b);
+  });
+
+  edSizeBtn.addEventListener('click', () => {
+    ED.size = (ED.size + 1) % 3;
+    edSizeBtn.textContent = 'Size: ' + ED_SIZE_NAMES[ED.size];
+    edUpdateTextTemp();
+    edRender();
+  });
+
+  document.getElementById('edUndo').addEventListener('click', () => {
+    ED.annos.pop();
+    if (!ED.annos.length) ED.annoKey = '';
+    edRender();
+  });
+
+  document.getElementById('edClear').addEventListener('click', () => {
+    ED.annos = [];
+    ED.annoKey = '';
+    ED.temp = null;
+    ED.textPos = null;
+    edTextInput.value = '';
+    edRender();
+  });
+
+  edTextInput.addEventListener('input', () => { edUpdateTextTemp(); edRender(); });
+  edTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); edAddText(); } });
+  document.getElementById('edTextAdd').addEventListener('click', edAddText);
+
+  function edAddText() {
+    const text = edTextInput.value.trim();
+    if (!text) { edTextInput.focus(); return; }
+    const pos = ED.textPos || { x: 0.5, y: 0.5 };
+    if (!ED.annos.length) ED.annoKey = edQuadKey();
+    ED.annos.push({ t: 'text', x: pos.x, y: pos.y, text: text, c: ED.color, s: ED.size });
+    edTextInput.value = '';
+    ED.textPos = null;
+    ED.temp = null;
+    edRender();
+  }
+
+  /* Tabs */
+  function edResizeSoon() {
+    requestAnimationFrame(() => { edResize(); edRender(); });
+  }
+
+  /* Annotations belong to one particular crop. */
+  function edAnnosConsistent() {
+    if (!ED.annos.length || !ED.annoKey || ED.annoKey === edQuadKey()) return true;
+    if (confirm('Changing the crop removes your annotations. Continue?')) {
+      ED.annos = [];
+      ED.annoKey = '';
+      return true;
+    }
+    return false;
+  }
+
+  function edSwitchTab(tab) {
+    if (tab === ED.tab || !ED.bmp) return;
+    if (tab === 'anno') {
+      if (!edAnnosConsistent()) return;
+      edBuildBase();
+    }
+    ED.tab = tab;
+    ED.drag = null;
+    ED.temp = null;
+    edSetTabUI();
+    edResizeSoon();
+  }
+
+  function edSetTabUI() {
+    const anno = ED.tab === 'anno';
+    edToolsCrop.hidden = anno;
+    edToolsAnno.hidden = !anno;
+    edTabCrop.classList.toggle('active', !anno);
+    edTabAnno.classList.toggle('active', anno);
+    setTitle(edTitle, ED.file ? ED.file.name : 'Edit',
+      anno ? 'Draw an arrow or circle, or add text' : 'Drag the corners to the edges of the page');
+  }
+
+  edTabCrop.addEventListener('click', () => edSwitchTab('crop'));
+  edTabAnno.addEventListener('click', () => edSwitchTab('anno'));
+
+  async function openEditor(f) {
+    const tok = ++ED.token;
+    ED.file = f;
+    ED.bmp = null;
+    ED.tab = 'crop';
+    ED.drag = null; ED.temp = null; ED.textPos = null;
+    editorEl.hidden = false;
+    edSetTabUI();
+    edSetTool('arrow');
+    edResize();
+    edRender();
+
+    let bmp;
+    try {
+      bmp = await getPreviewBitmap(f, PREVIEW_MAX);
+    } catch (err) {
+      console.error('Editor load failed:', f.name, err);
+      if (tok === ED.token) {
+        closeEditor(false);
+        alert('Could not open this photo for editing.\n\n' + (err && err.message ? err.message : err));
+      }
+      return;
+    }
+    if (tok !== ED.token || editorEl.hidden) { bmp.close(); return; }
+
+    ED.bmp = bmp;
+    ED.bw = bmp.width;
+    ED.bh = bmp.height;
+    const e = f.edit;
+    if (e && e.ui) {
+      ED.base = e.ui.base.map(p => ({ x: p.x, y: p.y }));
+      edSetAngle(e.ui.angle);
+    } else {
+      ED.base = fullQuad();
+      edSetAngle(0);
+    }
+    ED.annos = e && e.annos ? e.annos.map(a => Object.assign({}, a)) : [];
+    ED.annoKey = (e && e.annoKey) || '';
+    ED.baseCanvas = null;
+    ED.baseKey = '';
+    edTextInput.value = '';
+    edRender();
+  }
+
+  function closeEditor(applied) {
+    ED.token++;
+    editorEl.hidden = true;
+    if (ED.bmp) { ED.bmp.close(); ED.bmp = null; }
+    ED.baseCanvas = null;
+    const f = ED.file;
+    ED.file = null;
+    if (applied && f) {
+      invalidateProcessedCache();
+      refreshThumb(f);
+      if (!viewerEl.hidden) showViewerImage();
+    }
+  }
+
+  document.getElementById('edCancel').addEventListener('click', () => closeEditor(false));
+
+  document.getElementById('edDone').addEventListener('click', () => {
+    if (!ED.bmp || !ED.file) return;
+    if (!edAnnosConsistent()) return;
+    const quad = edIsFull() ? null : edQuad();
+    if (!quad && !ED.annos.length) {
+      ED.file.edit = null;
+    } else {
+      ED.file.edit = {
+        quad: quad,
+        ui: { base: ED.base.map(p => ({ x: p.x, y: p.y })), angle: ED.angle },
+        annos: ED.annos.map(a => Object.assign({}, a)),
+        annoKey: ED.annos.length ? ED.annoKey : ''
+      };
+    }
+    closeEditor(true);
+  });
+
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(() => { if (!editorEl.hidden) { edResize(); edRender(); } }).observe(edStage);
+  }
+  window.addEventListener('resize', () => { if (!editorEl.hidden) { edResize(); edRender(); } });
+
+  /* ------------------------------------------------------------------ *
    * Drag and drop
    * ------------------------------------------------------------------ */
   function dragHasFiles(e) {
@@ -2445,7 +3727,14 @@
   shareButton.addEventListener('click', shareNow);
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !settingsSheet.hidden) closeSettings();
+    if (e.key === 'Escape') {
+      if (!editorEl.hidden) closeEditor(false);
+      else if (!viewerEl.hidden) closeViewer();
+      else if (!settingsSheet.hidden) closeSettings();
+    } else if (!viewerEl.hidden && editorEl.hidden) {
+      if (e.key === 'ArrowLeft') viewerStep(-1);
+      else if (e.key === 'ArrowRight') viewerStep(1);
+    }
   });
 
   /* PWA install prompt (Chromium). iOS uses Safari's Add to Home Screen. */
