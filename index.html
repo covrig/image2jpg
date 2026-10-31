@@ -319,7 +319,7 @@
     /* Any other format gets lime before conversion */
     .thumb-ext.is-heic     { color: #ffffff; }
     .thumb-ext.is-other    { color: #00ff00; }
-    /* After conversion everything turns accent lime */
+    /* After conversion everything turns accent blue */
     .thumb-ext.is-converted{ color: #00ff00; }
     .thumb-ext.is-failed   { color: var(--danger-color); }
 
@@ -393,6 +393,13 @@
       align-items: center;
       box-shadow: 0 4px 14px var(--accent-glow);
       transition: all 0.2s;
+    }
+
+    /* Two buttons side by side: keep labels like "Share 11–20 of 35" on one row. */
+    .action-grid .btn-action {
+      padding: 15px 6px;
+      font-size: 14px;
+      white-space: nowrap;
     }
 
     .btn-action.ready-state {
@@ -692,6 +699,7 @@
         z-index: auto;
       }
       .btn-action { padding: 18px; font-size: 16px; }
+      .action-grid .btn-action { padding: 18px 8px; font-size: 15px; }
       .btn-action:not(:disabled):hover { filter: brightness(1.1); }
 
       /* Previews: whole right column, full height */
@@ -739,7 +747,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.2</h1>
+      <h1>IMAGE2JPG 1.2.5</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -781,8 +789,8 @@
         <select class="select" id="qualitySelect">
           <option value="60">60%</option>
           <option value="70">70%</option>
-          <option value="80">80%</option>
-          <option value="85" selected>85%</option>
+          <option value="80" selected>80%</option>
+          <option value="85">85%</option>
           <option value="90">90%</option>
           <option value="100">100%</option>
         </select>
@@ -856,7 +864,7 @@
           <div class="setting-label">Keep original name</div>
           <div class="setting-desc">Reuses the name of the source file</div>
         </div>
-        <input type="checkbox" id="setKeepName" checked>
+        <input type="checkbox" id="setKeepName">
       </div>
 
       <div class="setting-row">
@@ -873,6 +881,14 @@
           <div class="setting-desc">Goes after the name and date</div>
         </div>
         <div class="setting-control"><input type="text" id="setSuffix" placeholder="e.g. web"></div>
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Add quality</div>
+          <div class="setting-desc">Adds the JPG quality, e.g. q80, before the number</div>
+        </div>
+        <input type="checkbox" id="setUseQuality">
       </div>
 
       <div class="setting-row">
@@ -927,7 +943,7 @@
   let boxLong = 1920;              // 'box' mode: longest-side / shortest-side limits
   let boxShort = 1080;
   let boxTag = '1080p';
-  let currentQuality = 0.85;       // JPEG quality, 0.6 – 1.0
+  let currentQuality = 0.80;       // JPEG quality, 0.6 – 1.0
   const OUTPUT_MIME = 'image/jpeg';
   let thumbObjectUrls = [];
   let isProcessed = false;
@@ -936,10 +952,11 @@
   let isBusy = false;
 
   const DEFAULT_NAMING = {
-    prefix: '',
+    prefix: 'Image',
     suffix: '',
-    keepName: true,
+    keepName: false,
     useDate: false,
+    useQuality: false,
     useIndex: true,
     start: 1,
     digits: 2,
@@ -1103,7 +1120,7 @@
 
   function applyQualityChoice() {
     const q = parseInt(qualitySelect.value, 10);
-    currentQuality = (isFinite(q) && q >= 1 && q <= 100 ? q : 85) / 100;
+    currentQuality = (isFinite(q) && q >= 1 && q <= 100 ? q : 80) / 100;
     invalidateProcessedCache();
   }
 
@@ -1147,6 +1164,7 @@
     document.getElementById('setSuffix').value = naming.suffix;
     document.getElementById('setKeepName').checked = naming.keepName;
     document.getElementById('setUseDate').checked = naming.useDate;
+    document.getElementById('setUseQuality').checked = naming.useQuality;
     document.getElementById('setUseIndex').checked = naming.useIndex;
     document.getElementById('setStart').value = naming.start;
     document.getElementById('setDigits').value = naming.digits;
@@ -1162,6 +1180,7 @@
       suffix: document.getElementById('setSuffix').value.trim(),
       keepName: document.getElementById('setKeepName').checked,
       useDate: document.getElementById('setUseDate').checked,
+      useQuality: document.getElementById('setUseQuality').checked,
       useIndex: document.getElementById('setUseIndex').checked,
       start: isFinite(start) && start >= 0 ? start : 1,
       digits: isFinite(digits) ? Math.min(6, Math.max(1, digits)) : 2,
@@ -1182,12 +1201,17 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
+  function qualityTag() {
+    return `q${Math.round(currentQuality * 100)}`;
+  }
+
   function buildFileName(baseName, lastModified, position, ext) {
     const parts = [];
     if (naming.prefix) parts.push(sanitizeNamePart(naming.prefix));
     if (naming.keepName) parts.push(sanitizeNamePart(baseName));
     if (naming.useDate) parts.push(dateStamp(lastModified));
     if (naming.suffix) parts.push(sanitizeNamePart(naming.suffix));
+    if (naming.useQuality) parts.push(qualityTag());
     if (naming.useIndex) {
       parts.push(String(naming.start + position).padStart(naming.digits, '0'));
     }
@@ -1490,7 +1514,7 @@
   function resetApp() {
     clearSelection();
     sizeSelect.value = 'p50';
-    qualitySelect.value = '85';
+    qualitySelect.value = '80';
     applySizeChoice();
     applyQualityChoice();
   }
@@ -2148,8 +2172,12 @@
   /* ------------------------------------------------------------------ *
    * Output
    * ------------------------------------------------------------------ */
+  /* Images_50pct_q80_12items_oct_26.zip — month and year are the ZIP creation date. */
   function zipFileName() {
-    return `${naming.prefix ? sanitizeNamePart(naming.prefix) : 'ImageShare'}_${sizeTag()}.zip`;
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const now = new Date();
+    const yy = String(now.getFullYear() % 100).padStart(2, '0');
+    return `Images_${sizeTag()}_${qualityTag()}_${processedFilesCache.length}items_${months[now.getMonth()]}_${yy}.zip`;
   }
 
   function buildZipBlob(files, onProgress) {
@@ -2404,7 +2432,7 @@
     invalidateProcessedCache();
   });
 
-  ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setUseIndex', 'setStart', 'setDigits', 'setSep']
+  ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setUseQuality', 'setUseIndex', 'setStart', 'setDigits', 'setSep']
     .forEach(id => {
       const el = document.getElementById(id);
       el.addEventListener('input', readNamingFromForm);
