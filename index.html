@@ -13,8 +13,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <title>QUICK SHARE</title>
 
-  <!-- High-Performance WebAssembly HEIC/HEIF decoder -->
-  <script src="https://cdn.jsdelivr.net/npm/libheif-js@1.23.2/libheif-wasm/libheif-bundle.js"></script>
+  <!-- libheif is loaded lazily (inside Web Workers) the first time a HEIC file is added -->
   <!-- JSZip for ZIP archive downloads -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
@@ -710,7 +709,7 @@
 
   <div class="header">
     <div>
-      <h1>QUICK SHARE v.0.95</h1>
+      <h1>QUICK SHARE v.0.9.8</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1496,10 +1495,26 @@
    * HEIC decoding
    * ------------------------------------------------------------------ */
   let heifModuleInstance = null;
-  function getHeifModule() {
-    if (typeof window.libheif !== 'function') {
-      throw new Error('HEIC decoder is not loaded. Reconnect once to fetch it, then it works offline.');
+  const LIBHEIF_URL = 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.2/libheif-wasm/libheif-bundle.js';
+  let heifLoadPromise = null;
+  function loadLibheifMain() {
+    if (typeof window.libheif === 'function') return Promise.resolve();
+    if (!heifLoadPromise) {
+      heifLoadPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = LIBHEIF_URL;
+        s.onload = () => resolve();
+        s.onerror = () => {
+          heifLoadPromise = null;
+          reject(new Error('HEIC decoder is not loaded. Reconnect once to fetch it, then it works offline.'));
+        };
+        document.head.appendChild(s);
+      });
     }
+    return heifLoadPromise;
+  }
+  async function getHeifModule() {
+    await loadLibheifMain();
     if (!heifModuleInstance) heifModuleInstance = window.libheif();
     return heifModuleInstance;
   }
@@ -1568,7 +1583,7 @@
   }
 
   async function decodeHeicForThumbnail(buffer, targetSize = 240) {
-    const heif = getHeifModule();
+    const heif = await getHeifModule();
     const decoder = new heif.HeifDecoder();
     const images = decoder.decode(new Uint8Array(buffer));
     if (!images || !images.length) throw new Error('Could not decode HEIC image.');
@@ -1629,7 +1644,7 @@
   }
 
   async function decodeHeicBufferToCanvas(buffer) {
-    const heif = getHeifModule();
+    const heif = await getHeifModule();
     const decoder = new heif.HeifDecoder();
     const images = decoder.decode(new Uint8Array(buffer));
     if (!images || !images.length) throw new Error('Could not decode HEIC image.');
@@ -1671,7 +1686,230 @@
     await Promise.all(workers);
   }
 
-  /* Thumbnails decode two at a time, whatever order they arrive in. */
+  /* ------------------------------------------------------------------ *
+   * Web Worker pool: decode, resize and encode off the main thread
+   * ------------------------------------------------------------------ */
+  const WORKERS_OK = typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' &&
+    typeof Blob !== 'undefined' && typeof createImageBitmap === 'function';
+  const IS_MOBILE = !!((navigator.userAgentData && navigator.userAgentData.mobile) ||
+    mediaQuery('(pointer: coarse)').matches);
+  const CORES = navigator.hardwareConcurrency || 4;
+  // Phones decode a 12 MP HEIC to ~50 MB of RGBA each, so keep the pool small there.
+  const POOL_SIZE = IS_MOBILE ? Math.max(1, Math.min(2, CORES - 1)) : Math.max(1, Math.min(6, CORES - 1));
+  const THUMB_POOL_SIZE = Math.min(IS_MOBILE ? 1 : 2, POOL_SIZE);
+
+  const WORKER_BODY = `
+  let lib = null;
+  const TIMEOUT = 30000;
+
+  function targetSize(w, h, p) {
+    let f = 1;
+    if (p.scaleMode === 'pixels') {
+      const r = [];
+      if (p.maxWidth) r.push(p.maxWidth / w);
+      if (p.maxHeight) r.push(p.maxHeight / h);
+      f = r.length ? Math.min.apply(null, r) : 1;
+      if (f > 1) f = 1;
+    } else {
+      f = p.scale;
+    }
+    return { w: Math.max(1, Math.round(w * f)), h: Math.max(1, Math.round(h * f)) };
+  }
+
+  function display(im, imageData) {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('HEIC decode timed out after 30s')), TIMEOUT);
+      try {
+        im.display(imageData, (r) => {
+          clearTimeout(t);
+          r ? resolve(r) : reject(new Error('HEIC decoder returned no image data'));
+        });
+      } catch (e) { clearTimeout(t); reject(e); }
+    });
+  }
+
+  async function decodeHeic(buffer, preferThumb) {
+    if (!lib) lib = libheif();
+    const imgs = new lib.HeifDecoder().decode(new Uint8Array(buffer));
+    if (!imgs || !imgs.length) throw new Error('Could not decode HEIC image.');
+    let im = imgs[0];
+    if (preferThumb) {
+      try {
+        const t = im.get_thumbnails && im.get_thumbnails();
+        if (t && t.length) im = t[0];
+      } catch (_) {}
+    }
+    const w = im.get_width(), h = im.get_height();
+    const imageData = new ImageData(w, h);
+    try {
+      await display(im, imageData);
+    } finally {
+      try { if (im !== imgs[0]) im.free(); } catch (_) {}
+      for (const i of imgs) { try { i.free && i.free(); } catch (_) {} }
+    }
+    const cv = new OffscreenCanvas(w, h);
+    cv.getContext('2d').putImageData(imageData, 0, 0);
+    return { source: cv, w: w, h: h };
+  }
+
+  async function encode(source, w, h, mime, quality, opaque) {
+    const out = new OffscreenCanvas(w, h);
+    const ctx = out.getContext('2d');
+    if (opaque) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(source, 0, 0, w, h);
+    if (source.close) source.close();
+    return out.convertToBlob({ type: mime, quality: quality });
+  }
+
+  self.onmessage = async (e) => {
+    const m = e.data;
+    try {
+      if (m.op === 'thumb') {
+        const d = await decodeHeic(m.buffer, true);
+        const s = Math.min(1, m.size / Math.max(d.w, d.h));
+        const blob = await encode(d.source, Math.max(1, Math.round(d.w * s)), Math.max(1, Math.round(d.h * s)), 'image/jpeg', 0.7, true);
+        self.postMessage({ id: m.id, blob: blob });
+        return;
+      }
+      let source, w, h;
+      if (m.heic) {
+        const d = await decodeHeic(m.buffer, false);
+        source = d.source; w = d.w; h = d.h;
+      } else {
+        source = await createImageBitmap(new Blob([m.buffer], { type: m.mime }));
+        w = source.width; h = source.height;
+      }
+      const t = targetSize(w, h, m);
+      const blob = await encode(source, t.w, t.h, m.outMime, m.quality, m.outMime === 'image/jpeg');
+      self.postMessage({ id: m.id, blob: blob, w: t.w, h: t.h });
+    } catch (err) {
+      self.postMessage({ id: m.id, error: (err && err.message) ? err.message : String(err) });
+    }
+  };
+  `;
+
+  let workerUrl = null;
+  function getWorkerUrl() {
+    if (!workerUrl) {
+      const src = "importScripts('" + LIBHEIF_URL + "');\n" + WORKER_BODY;
+      workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    }
+    return workerUrl;
+  }
+
+  /*
+   * Runs `count` jobs on up to `size` workers. makeJob(i) resolves to { msg, transfer };
+   * onDone(i, data) fires per job (data.error set on failure). Workers are terminated
+   * at the end, which frees their WASM memory. Rejects only if no worker can be created.
+   */
+  function runPool(count, size, makeJob, onDone) {
+    return new Promise((resolve, reject) => {
+      if (count === 0) { resolve(); return; }
+      let nextIndex = 0, finished = 0, settled = false;
+      const workers = [];
+
+      const finishOne = (i, data) => {
+        try { onDone(i, data); } catch (e) { console.error(e); }
+        finished++;
+        if (finished === count && !settled) {
+          settled = true;
+          workers.forEach(w => w.terminate());
+          resolve();
+        }
+      };
+
+      const pump = async (w) => {
+        if (settled || nextIndex >= count) return;
+        const i = nextIndex++;
+        w.cur = i;
+        try {
+          const job = await makeJob(i);
+          w.postMessage(job.msg, job.transfer || []);
+        } catch (err) {
+          w.cur = -1;
+          finishOne(i, { error: (err && err.message) || 'Could not read file' });
+          pump(w);
+        }
+      };
+
+      const spawn = () => {
+        const w = new Worker(getWorkerUrl());
+        w.cur = -1;
+        w.onmessage = (e) => {
+          const i = w.cur; w.cur = -1;
+          if (i >= 0) finishOne(i, e.data);
+          pump(w);
+        };
+        w.onerror = (ev) => {
+          if (ev && ev.preventDefault) ev.preventDefault();
+          const i = w.cur; w.cur = -1;
+          const idx = workers.indexOf(w);
+          w.terminate();
+          let nw = null;
+          try { nw = spawn(); if (idx >= 0) workers[idx] = nw; else workers.push(nw); } catch (e) { /* no replacement */ }
+          if (i >= 0) finishOne(i, { error: (ev && ev.message) || 'Worker crashed' });
+          if (nw) pump(nw);
+        };
+        return w;
+      };
+
+      try {
+        const n = Math.min(size, count);
+        for (let k = 0; k < n; k++) { const w = spawn(); workers.push(w); }
+        workers.forEach(w => pump(w));
+      } catch (err) {
+        settled = true;
+        workers.forEach(w => w.terminate());
+        reject(err);
+      }
+    });
+  }
+
+  function pickOutputMime(fileObj) {
+    let targetMime = currentFormat === 'original' ? fileObj.type : 'image/jpeg';
+    if (!targetMime || fileObj.isHeic || /hei[cf]/.test(targetMime)) targetMime = 'image/jpeg';
+    if (!/^image\/(jpeg|png|webp)$/.test(targetMime)) targetMime = 'image/jpeg';
+    return targetMime;
+  }
+
+  async function makeConvertJob(i) {
+    const fileObj = selectedFiles[i];
+    const buffer = await fileObj.src.arrayBuffer();
+    return {
+      msg: {
+        id: i, op: 'convert', buffer,
+        heic: fileObj.isHeic, mime: fileObj.type, outMime: pickOutputMime(fileObj),
+        scaleMode, scale: currentScale, maxWidth, maxHeight, quality: 0.88
+      },
+      transfer: [buffer]
+    };
+  }
+
+  function thumbsViaWorkers(batch) {
+    const live = batch.filter(f => f.el && f.el.isConnected);
+    return runPool(
+      live.length, THUMB_POOL_SIZE,
+      async (i) => {
+        const buffer = await live[i].src.arrayBuffer();
+        return { msg: { id: i, op: 'thumb', buffer, size: 240 }, transfer: [buffer] };
+      },
+      (i, data) => {
+        const f = live[i];
+        if (data.error || !data.blob) {
+          console.error('HEIC thumbnail failed:', f.name, data.error);
+          if (f.badge) f.badge.textContent = 'NO PREVIEW';
+        } else if (f.el && f.el.isConnected) {
+          const url = URL.createObjectURL(data.blob);
+          thumbObjectUrls.push(url);
+          f.img.src = url;
+        }
+      }
+    );
+  }
+
+  /* Thumbnails decode in the worker pool, whatever order they arrive in. */
   let heicThumbQueue = [];
   let heicThumbRunning = false;
 
@@ -1682,6 +1920,10 @@
     (async () => {
       while (heicThumbQueue.length) {
         const batch = heicThumbQueue.splice(0, heicThumbQueue.length);
+        if (WORKERS_OK) {
+          try { await thumbsViaWorkers(batch); continue; }
+          catch (err) { console.warn('Worker thumbnails unavailable, using main thread', err); }
+        }
         await mapConcurrent(batch, 2, loadHeicThumbnail);
       }
       heicThumbRunning = false;
@@ -1726,24 +1968,61 @@
     setProgress(0, total);
     await nextFrame();
 
+    const fail = (fileObj, err) => {
+      console.error('Conversion failed:', fileObj.name, err);
+      failures.push({ name: fileObj.name, message: err && err.message ? err.message : String(err) });
+      if (fileObj.el) fileObj.el.classList.add('is-failed');
+      if (fileObj.badge) fileObj.badge.textContent = 'FAILED';
+    };
+
     try {
-      for (let i = 0; i < total; i++) {
-        const fileObj = selectedFiles[i];
-        if (fileObj.el) fileObj.el.classList.remove('is-failed');
-        if (fileObj.badge && fileObj.badge.textContent === 'FAILED') fileObj.badge.textContent = fileObj.extLabel || '';
+      selectedFiles.forEach(f => {
+        if (f.el) f.el.classList.remove('is-failed');
+        if (f.badge && f.badge.textContent === 'FAILED') f.badge.textContent = f.extLabel || '';
+      });
 
+      const results = new Array(total).fill(null);
+      let usedWorkers = false;
+
+      if (WORKERS_OK) {
         try {
-          const file = await convertOne(fileObj, i, usedNames);
-          processedFilesCache.push(file);
+          let completed = 0;
+          await runPool(total, POOL_SIZE, makeConvertJob, (i, data) => {
+            if (data.error || !data.blob) fail(selectedFiles[i], new Error(data.error || 'The browser could not encode this image.'));
+            else results[i] = { blob: data.blob };
+            setProgress(++completed, total);
+          });
+          usedWorkers = true;
         } catch (err) {
-          console.error('Conversion failed:', fileObj.name, err);
-          failures.push({ name: fileObj.name, message: err && err.message ? err.message : String(err) });
-          if (fileObj.el) fileObj.el.classList.add('is-failed');
-          if (fileObj.badge) fileObj.badge.textContent = 'FAILED';
+          console.warn('Worker pool unavailable, converting on the main thread', err);
+          results.fill(null);
+          failures.length = 0;
         }
+      }
 
-        setProgress(i + 1, total);
-        await nextFrame();
+      if (!usedWorkers) {
+        for (let i = 0; i < total; i++) {
+          try {
+            results[i] = { file: await convertOne(selectedFiles[i], i, usedNames) };
+          } catch (err) {
+            fail(selectedFiles[i], err);
+          }
+          setProgress(i + 1, total);
+          await nextFrame();
+        }
+      }
+
+      // Name files in selection order so numbering stays predictable.
+      for (let i = 0; i < total; i++) {
+        const r = results[i];
+        if (!r) continue;
+        if (r.file) { processedFilesCache.push(r.file); continue; }
+        const mime = r.blob.type || pickOutputMime(selectedFiles[i]);
+        const name = makeUnique(
+          buildFileName(stripExt(selectedFiles[i].name), selectedFiles[i].file.lastModified, i, extFromMime(mime)),
+          usedNames
+        );
+        processedFilesCache.push(new File([r.blob], name, { type: mime }));
       }
 
       hideProgress();
@@ -1861,7 +2140,7 @@
       const zip = new JSZip();
       processedFilesCache.forEach(file => zip.file(file.name, file));
 
-      const zipContent = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+      const zipContent = await zip.generateAsync({ type: 'blob', compression: 'STORE' }, (metadata) => {
         const pct = Math.round(metadata.percent);
         progressFill.style.width = pct + '%';
         progressLabel.textContent = `${pct}% complete — packing ${processedFilesCache.length} images`;
