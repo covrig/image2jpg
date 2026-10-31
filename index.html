@@ -634,6 +634,7 @@
 
     /* ---- Thumbnails are tappable; pencil badge marks edited photos ---- */
     .thumb-wrapper { cursor: pointer; }
+    #thumbGrid.is-locked .thumb-wrapper { cursor: default; }
 
     .thumb-edited {
       position: absolute;
@@ -932,7 +933,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.3</h1>
+      <h1>IMAGE2JPG 1.3.1</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1690,7 +1691,7 @@
 
     /* Tap a thumbnail to open the full-screen viewer. */
     wrap.addEventListener('click', () => {
-      if (isBusy) return;
+      if (isBusy || isProcessed) return;       // viewer and editor are off once the batch is converted
       const idx = selectedFiles.findIndex(f => f.id === fileObj.id);
       if (idx !== -1) openViewer(idx);
     });
@@ -1742,6 +1743,7 @@
   function invalidateProcessedCache() {
     /* Settings changed, so any "converted" styling on the thumbnails is void. */
     isProcessed = false;
+    thumbGrid.classList.remove('is-locked');
     processedFilesCache = [];
     shareOffset = 0;
     singleActionContainer.style.display = 'block';
@@ -2363,6 +2365,7 @@
       }
 
       isProcessed = true;
+      thumbGrid.classList.add('is-locked');
       const totalConvertedSize = processedFilesCache.reduce((acc, f) => acc + f.size, 0);
       const doneOriginal = selectedFiles
         .filter(f => f.converted)
@@ -3237,6 +3240,16 @@
     for (let i = 1; i < 4; i++) ctx.lineTo(q[i].x, q[i].y);
     ctx.closePath();
     ctx.stroke();
+    q.forEach((p, i) => {                          // edge dots, between the corners
+      const nx = q[(i + 1) % 4];
+      ctx.beginPath();
+      ctx.arc((p.x + nx.x) / 2, (p.y + nx.y) / 2, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#3880ff';
+      ctx.stroke();
+    });
     q.forEach(p => {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
@@ -3295,20 +3308,86 @@
   function edCropDown(p) {
     const r = ED.rect;
     const q = edQuad().map(pt => ({ x: r.x + pt.x * r.w, y: r.y + pt.y * r.h }));
-    let best = -1, bestDist = 36;
-    q.forEach((pt, i) => {
-      const d = Math.hypot(pt.x - p.x, pt.y - p.y);
-      if (d < bestDist) { bestDist = d; best = i; }
+    let best = -1, edge = -1, bestDist = 36;
+    q.forEach((pt, i) => {                                   // corners win ties
+      const d = Math.hypot(pt.x - p.x, pt.y - p.y) - 4;
+      if (d < bestDist) { bestDist = d; best = i; edge = -1; }
     });
-    if (best >= 0) ED.drag = { mode: 'corner', i: best };
+    q.forEach((pt, i) => {
+      const nx = q[(i + 1) % 4];
+      const d = Math.hypot((pt.x + nx.x) / 2 - p.x, (pt.y + nx.y) / 2 - p.y);
+      if (d < bestDist) { bestDist = d; best = -1; edge = i; }
+    });
+    if (edge >= 0) ED.drag = edStartEdge(edge, p);
+    else if (best >= 0) ED.drag = { mode: 'corner', i: best };
     else if (edInside(q, p)) ED.drag = { mode: 'move', start: p, orig: edQuad() };
     else ED.drag = null;
+  }
+
+  /* Edge dots: slide one side of the crop in or out. The side keeps its direction
+     and its two end points slide along the neighbouring sides, so nothing skews. */
+  function edStartEdge(i, p) {
+    const orig = edQuad();
+    const a = { x: orig[i].x * ED.bw, y: orig[i].y * ED.bh };
+    const b = { x: orig[(i + 1) % 4].x * ED.bw, y: orig[(i + 1) % 4].y * ED.bh };
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const u = { x: (b.x - a.x) / len, y: (b.y - a.y) / len };
+    const r = ED.rect;
+    return {
+      mode: 'edge', i: i, orig: orig, u: u, n: { x: u.y, y: -u.x }, last: 0,
+      inb: orig.every(pt => pt.x >= -1e-6 && pt.x <= 1 + 1e-6 && pt.y >= -1e-6 && pt.y <= 1 + 1e-6),
+      startPx: { x: (p.x - r.x) / r.w * ED.bw, y: (p.y - r.y) / r.h * ED.bh }
+    };
+  }
+
+  /* The crop with side d.i moved `off` pixels along its normal; null if the sides turn parallel. */
+  function edEdgeQuad(d, off) {
+    const P = d.orig.map(pt => ({ x: pt.x * ED.bw, y: pt.y * ED.bh }));
+    const i = d.i;
+    const a = P[i], b = P[(i + 1) % 4], prev = P[(i + 3) % 4], next = P[(i + 2) % 4];
+    const ox = a.x + d.n.x * off, oy = a.y + d.n.y * off;     // a point on the moved side
+    const hit = (p0, dir) => {
+      const den = d.u.x * dir.y - d.u.y * dir.x;
+      if (Math.abs(den) < 1e-9) return null;
+      const t = ((p0.x - ox) * dir.y - (p0.y - oy) * dir.x) / den;
+      return { x: ox + d.u.x * t, y: oy + d.u.y * t };
+    };
+    const na = hit(a, { x: a.x - prev.x, y: a.y - prev.y });
+    const nb = hit(b, { x: b.x - next.x, y: b.y - next.y });
+    if (!na || !nb) return null;
+    const q = d.orig.map(pt => ({ x: pt.x, y: pt.y }));
+    q[i] = { x: na.x / ED.bw, y: na.y / ED.bh };
+    q[(i + 1) % 4] = { x: nb.x / ED.bw, y: nb.y / ED.bh };
+    return q;
+  }
+
+  function edEdgeOk(q, inb) {
+    if (!edConvex(q)) return false;
+    return !inb || q.every(pt => pt.x >= -1e-6 && pt.x <= 1 + 1e-6 && pt.y >= -1e-6 && pt.y <= 1 + 1e-6);
   }
 
   function edCropMove(p) {
     const d = ED.drag, r = ED.rect;
     if (!d) return;
-    if (d.mode === 'corner') {
+    if (d.mode === 'edge') {
+      const cx = (p.x - r.x) / r.w * ED.bw, cy = (p.y - r.y) / r.h * ED.bh;
+      const target = (cx - d.startPx.x) * d.n.x + (cy - d.startPx.y) * d.n.y;
+      let q = edEdgeQuad(d, target);
+      if (q && edEdgeOk(q, d.inb)) {
+        d.last = target;
+      } else {                                   // stop at the farthest position that still works
+        let lo = d.last, hi = target;
+        q = null;
+        for (let k = 0; k < 12; k++) {
+          const mid = (lo + hi) / 2;
+          const qq = edEdgeQuad(d, mid);
+          if (qq && edEdgeOk(qq, d.inb)) { lo = mid; q = qq; } else { hi = mid; }
+        }
+        if (!q) return;
+        d.last = lo;
+      }
+      ED.base = q.map(pt => edRot(pt, -edFrameRad()));
+    } else if (d.mode === 'corner') {
       const np = { x: clamp01((p.x - r.x) / r.w), y: clamp01((p.y - r.y) / r.h) };
       const disp = edQuad();
       disp[d.i] = np;
@@ -3523,7 +3602,7 @@
     edTabCrop.classList.toggle('active', !anno);
     edTabAnno.classList.toggle('active', anno);
     setTitle(edTitle, ED.file ? ED.file.name : 'Edit',
-      anno ? 'Draw an arrow or circle, or add text' : 'Drag the corners to the edges of the page');
+      anno ? 'Draw an arrow or circle, or add text' : 'Corners fix perspective; edge dots crop without skew');
   }
 
   edTabCrop.addEventListener('click', () => edSwitchTab('crop'));
