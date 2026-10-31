@@ -803,6 +803,8 @@
     .ed-row[hidden] { display: none; }
     .ed-lbl { font-size: 12px; font-weight: 700; color: #8e8e93; flex: 0 0 auto; }
     .ed-row input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--accent-color); }
+    #edToolsAnno .ov-btn { padding: 8px 10px; font-size: 13px; }
+    #edZoomVal { flex: 0 0 44px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     #edAngleVal { flex: 0 0 52px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     #edTextRow input[type="text"] { flex: 1 1 auto; min-width: 0; }
 
@@ -933,7 +935,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.3.5</h1>
+      <h1>IMAGE2JPG 1.3.6</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1161,6 +1163,7 @@
         <button class="ov-btn" id="edToolEllipse" type="button" data-tool="ellipse">◯ Circle</button>
         <button class="ov-btn" id="edToolRect" type="button" data-tool="rect">▭ Rectangle</button>
         <button class="ov-btn" id="edToolLoupe" type="button" data-tool="loupe">🔍 Loupe</button>
+        <button class="ov-btn" id="edToolMove" type="button" data-tool="move">✥ Move</button>
         <button class="ov-btn" id="edToolText" type="button" data-tool="text">T Text</button>
       </div>
       <div class="ed-row" id="edColors"></div>
@@ -1168,6 +1171,12 @@
         <button class="ov-btn" id="edSize" type="button">Size: M</button>
         <button class="ov-btn" id="edUndo" type="button">↶ Undo</button>
         <button class="ov-btn" id="edClear" type="button">Clear</button>
+        <button class="ov-btn" id="edDelete" type="button" disabled>🗑 Delete</button>
+      </div>
+      <div class="ed-row" id="edZoomRow" hidden>
+        <span class="ed-lbl">Loupe zoom</span>
+        <input type="range" id="edZoom" min="1.5" max="8" step="0.1" value="2.5" aria-label="Loupe zoom">
+        <span id="edZoomVal">2.5×</span>
       </div>
       <div class="ed-row" id="edTextRow" hidden>
         <input type="text" id="edTextInput" placeholder="Type, then tap Add" maxlength="60">
@@ -2726,25 +2735,44 @@
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.stroke();
       } else if (a.t === 'loupe' && base) {
-        // Round magnifier: (x1,y1) is the centre, (x2,y2) a point on the rim.
-        const cx = a.x1 * w, cy = a.y1 * h;
+        // Round magnifier. (x1,y1) = where the bubble is drawn, (x2,y2) = a point on its rim,
+        // (sx,sy) = the spot being magnified (so the bubble can sit elsewhere), z = zoom.
+        const dcx = a.x1 * w, dcy = a.y1 * h;
+        const scx = (a.sx === undefined ? a.x1 : a.sx) * w, scy = (a.sy === undefined ? a.y1 : a.sy) * h;
         const rad = Math.max(2, Math.hypot((a.x2 - a.x1) * w, (a.y2 - a.y1) * h));
-        const half = rad / 2.5;                               // 2.5x magnification
+        const zoom = a.z > 1 ? a.z : 2.5;
+        const half = rad / zoom;                              // half-size of the magnified area
         const kx = base.width / w, ky = base.height / h;
+        // Marks the magnified spot and links it to the bubble; hidden while the bubble covers it.
+        const sep = Math.hypot(dcx - scx, dcy - scy);
+        ctx.lineWidth = Math.max(1.5, lw * 0.6);
+        ctx.beginPath();
+        ctx.arc(scx, scy, half, 0, Math.PI * 2);
+        ctx.stroke();
+        if (sep > half + rad) {
+          const ux = (dcx - scx) / sep, uy = (dcy - scy) / sep;
+          ctx.beginPath();
+          ctx.moveTo(scx + ux * half, scy + uy * half);
+          ctx.lineTo(dcx - ux * rad, dcy - uy * rad);
+          ctx.stroke();
+        }
+        ctx.lineWidth = lw;
         ctx.save();
         ctx.beginPath();
-        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.arc(dcx, dcy, rad, 0, Math.PI * 2);
         ctx.clip();
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(base, (cx - half) * kx, (cy - half) * ky, 2 * half * kx, 2 * half * ky,
-          cx - rad, cy - rad, 2 * rad, 2 * rad);
+        ctx.fillStyle = '#ffffff';                            // in case the magnified area runs off the photo
+        ctx.fillRect(dcx - rad, dcy - rad, 2 * rad, 2 * rad);
+        ctx.drawImage(base, (scx - half) * kx, (scy - half) * ky, 2 * half * kx, 2 * half * ky,
+          dcx - rad, dcy - rad, 2 * rad, 2 * rad);
         ctx.restore();
         ctx.save();
         ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
         ctx.shadowBlur = lw * 1.5;
         ctx.beginPath();
-        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.arc(dcx, dcy, rad, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       } else if (a.t === 'rect') {
@@ -3160,8 +3188,8 @@
   const ED = {
     token: 0, file: null, bmp: null, bw: 0, bh: 0, tab: 'crop',
     base: fullQuad(), angle: 0,
-    annos: [], annoKey: '',
-    tool: 'arrow', color: ED_COLORS[0], size: 1,
+    annos: [], annoKey: '', sel: -1,
+    tool: 'arrow', color: ED_COLORS[0], size: 1, loupeZoom: 2.5,
     baseCanvas: null, baseKey: '',
     rect: { x: 0, y: 0, w: 1, h: 1 }, cw: 1, ch: 1, dpr: 1,
     drag: null, temp: null, textPos: null
@@ -3365,6 +3393,7 @@
     ctx.clip();
     drawAnnotations(ctx, r.w, r.h, list, c);
     ctx.restore();
+    if (ED.sel >= 0 && ED.annos[ED.sel]) edDrawSelection(ctx, ED.annos[ED.sel]);
     if (ED.textPos) {                              // small cross where the text will go
       const x = r.x + ED.textPos.x * r.w, y = r.y + ED.textPos.y * r.h;
       ctx.save();
@@ -3507,8 +3536,146 @@
       : null;
   }
 
+  const edZoomRow = document.getElementById('edZoomRow');
+  const edZoomInput = document.getElementById('edZoom');
+  const edZoomVal = document.getElementById('edZoomVal');
+  const edDeleteBtn = document.getElementById('edDelete');
+  const ANNO_FS = [0.035, 0.055, 0.085, 0.115, 0.15];     // text sizes: keep in sync with drawAnnotations
+
+  /* Shows or hides the controls that depend on the selection and the active tool. */
+  function edSyncUI() {
+    const a = ED.annos[ED.sel];
+    const selLoupe = !!a && a.t === 'loupe';
+    edDeleteBtn.disabled = !a;
+    edZoomRow.hidden = !(ED.tool === 'loupe' || selLoupe);
+    const z = selLoupe ? (a.z > 1 ? a.z : 2.5) : ED.loupeZoom;
+    edZoomInput.value = String(z);
+    edZoomVal.textContent = z.toFixed(1) + '×';
+    edResizeSoon();
+  }
+
+  /* ---- Selecting and moving annotations ---- */
+  const edLoupeSource = (a) => ({ x: a.sx === undefined ? a.x1 : a.sx, y: a.sy === undefined ? a.y1 : a.sy });
+
+  function edSegDist(p, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    let t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+
+  /* Bounding box of an annotation in canvas pixels (not used for loupes). */
+  function edAnnoBounds(a) {
+    const r = ED.rect;
+    if (a.t === 'text') {
+      const si = a.s >= 0 && a.s <= 4 ? a.s : 1;
+      const fs = Math.max(10, Math.min(r.w, r.h) * ANNO_FS[si]);
+      edCtx.save();
+      edCtx.font = 'bold ' + fs + 'px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+      const tw = edCtx.measureText(a.text || '').width;
+      edCtx.restore();
+      const pad = fs * 0.3, lo = tw / 2 + pad, hi = r.w - tw / 2 - pad;
+      const cx = lo > hi ? r.w / 2 : Math.max(lo, Math.min(hi, a.x * r.w));
+      const cy = Math.max(fs / 2, Math.min(r.h - fs / 2, a.y * r.h));
+      return { x: r.x + cx - tw / 2, y: r.y + cy - fs / 2, w: tw, h: fs };
+    }
+    const x1 = r.x + Math.min(a.x1, a.x2) * r.w, x2 = r.x + Math.max(a.x1, a.x2) * r.w;
+    const y1 = r.y + Math.min(a.y1, a.y2) * r.h, y2 = r.y + Math.max(a.y1, a.y2) * r.h;
+    return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+  }
+
+  function edAnnoHit(a, p) {
+    const r = ED.rect, tol = 16;
+    const px = n => r.x + n * r.w, py = n => r.y + n * r.h;
+    if (a.t === 'arrow') {
+      return edSegDist(p, { x: px(a.x1), y: py(a.y1) }, { x: px(a.x2), y: py(a.y2) }) <= tol;
+    }
+    if (a.t === 'loupe') {                           // anywhere on the bubble
+      return Math.hypot(p.x - px(a.x1), p.y - py(a.y1)) <= Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h) + 8;
+    }
+    const b = edAnnoBounds(a);
+    if (a.t === 'text') {
+      return p.x >= b.x - 10 && p.x <= b.x + b.w + 10 && p.y >= b.y - 10 && p.y <= b.y + b.h + 10;
+    }
+    if (a.t === 'rect') {                            // the outline, not the inside
+      const outer = p.x >= b.x - tol && p.x <= b.x + b.w + tol && p.y >= b.y - tol && p.y <= b.y + b.h + tol;
+      if (!outer) return false;
+      if (b.w <= 2 * tol || b.h <= 2 * tol) return true;
+      return !(p.x > b.x + tol && p.x < b.x + b.w - tol && p.y > b.y + tol && p.y < b.y + b.h - tol);
+    }
+    if (a.t === 'ellipse') {
+      const rx = Math.max(1, b.w / 2), ry = Math.max(1, b.h / 2);
+      const k = Math.hypot((p.x - (b.x + rx)) / rx, (p.y - (b.y + ry)) / ry);
+      return Math.abs(k - 1) * Math.min(rx, ry) <= tol;
+    }
+    return false;
+  }
+
+  function edHitAnno(p) {
+    for (let i = ED.annos.length - 1; i >= 0; i--) {   // topmost first
+      if (edAnnoHit(ED.annos[i], p)) return i;
+    }
+    return -1;
+  }
+
+  function edDrawSelection(ctx, a) {
+    const r = ED.rect;
+    ctx.save();
+    ctx.setLineDash([6, 4]);
+    const outline = () => {
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#3880ff';
+      ctx.stroke();
+    };
+    if (a.t === 'loupe') {
+      const cx = r.x + a.x1 * r.w, cy = r.y + a.y1 * r.h;
+      const rad = Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h);
+      ctx.beginPath();
+      ctx.arc(cx, cy, rad + 6, 0, Math.PI * 2);
+      outline();
+      ctx.setLineDash([]);
+      const s = edLoupeSource(a);                    // handle for the magnified spot
+      ctx.beginPath();
+      ctx.arc(r.x + s.x * r.w, r.y + s.y * r.h, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#3880ff';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+    } else {
+      const b = edAnnoBounds(a);
+      ctx.beginPath();
+      ctx.rect(b.x - 8, b.y - 8, b.w + 16, b.h + 16);
+      outline();
+    }
+    ctx.restore();
+  }
+
+  function edMoveDown(p) {
+    const r = ED.rect;
+    const cur = ED.annos[ED.sel];
+    if (cur && cur.t === 'loupe') {                  // drag the blue dot to change what is magnified
+      const s = edLoupeSource(cur);
+      if (Math.hypot(r.x + s.x * r.w - p.x, r.y + s.y * r.h - p.y) <= 18) {
+        ED.drag = { mode: 'loupeSrc', idx: ED.sel, orig: Object.assign({}, cur), start: p };
+        return;
+      }
+    }
+    const i = edHitAnno(p);
+    ED.sel = i;
+    if (i >= 0) ED.drag = { mode: 'moveAnno', idx: i, orig: Object.assign({}, ED.annos[i]), start: p };
+    edSyncUI();
+    edRender();
+  }
+
   function edAnnoDown(p) {
+    if (ED.tool === 'move') { edMoveDown(p); return; }
     const n = edAnnoPoint(p);
+    ED.sel = -1;
+    edSyncUI();
     if (ED.tool === 'text') {
       ED.textPos = n;
       edUpdateTextTemp();
@@ -3518,23 +3685,51 @@
     }
     ED.drag = { mode: 'draw' };
     ED.temp = { t: ED.tool, x1: n.x, y1: n.y, x2: n.x, y2: n.y, c: ED.color, s: ED.size };
+    if (ED.tool === 'loupe') { ED.temp.sx = n.x; ED.temp.sy = n.y; ED.temp.z = ED.loupeZoom; }
   }
 
   function edAnnoMove(p) {
-    if (!ED.drag || ED.drag.mode !== 'draw' || !ED.temp) return;
-    const n = edAnnoPoint(p);
-    ED.temp.x2 = n.x;
-    ED.temp.y2 = n.y;
+    const d = ED.drag;
+    if (!d) return;
+    if (d.mode === 'draw') {
+      if (!ED.temp) return;
+      const n = edAnnoPoint(p);
+      ED.temp.x2 = n.x;
+      ED.temp.y2 = n.y;
+      edRender();
+      return;
+    }
+    const r = ED.rect;
+    let dx = (p.x - d.start.x) / r.w, dy = (p.y - d.start.y) / r.h;
+    const o = d.orig;
+    if (d.mode === 'moveAnno') {
+      const isText = o.t === 'text';
+      const xs = isText ? [o.x] : [o.x1, o.x2], ys = isText ? [o.y] : [o.y1, o.y2];
+      const loX = -Math.min.apply(null, xs), hiX = 1 - Math.max.apply(null, xs);
+      const loY = -Math.min.apply(null, ys), hiY = 1 - Math.max.apply(null, ys);
+      if (loX <= hiX) dx = Math.min(hiX, Math.max(loX, dx));
+      if (loY <= hiY) dy = Math.min(hiY, Math.max(loY, dy));
+      const a = Object.assign({}, o);               // a loupe keeps its sx,sy: only the bubble moves
+      if (isText) { a.x = o.x + dx; a.y = o.y + dy; }
+      else { a.x1 = o.x1 + dx; a.x2 = o.x2 + dx; a.y1 = o.y1 + dy; a.y2 = o.y2 + dy; }
+      ED.annos[d.idx] = a;
+    } else if (d.mode === 'loupeSrc') {
+      const s = edLoupeSource(o);
+      ED.annos[d.idx] = Object.assign({}, o, { sx: clamp01(s.x + dx), sy: clamp01(s.y + dy) });
+    }
     edRender();
   }
 
   function edAnnoUp() {
-    if (!ED.drag || ED.drag.mode !== 'draw' || !ED.temp) return;
+    const d = ED.drag;
+    if (!d || d.mode !== 'draw' || !ED.temp) return;
     const a = ED.temp, r = ED.rect;
     ED.temp = null;
     if (Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h) > 10) {
       if (!ED.annos.length) ED.annoKey = edQuadKey();
       ED.annos.push(a);
+      if (a.t === 'loupe') ED.sel = ED.annos.length - 1;   // so its zoom can be adjusted right away
+      edSyncUI();
     }
     edRender();
   }
@@ -3583,6 +3778,7 @@
     edSetAngle(0);
     ED.annos = [];
     ED.annoKey = '';
+    ED.sel = -1;
     ED.temp = null;
     ED.textPos = null;
     ED.baseCanvas = null;
@@ -3595,7 +3791,8 @@
     document.querySelectorAll('#edToolsAnno [data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
     edTextRow.hidden = tool !== 'text';
     if (tool !== 'text') { ED.textPos = null; ED.temp = null; }
-    edResizeSoon();
+    if (tool !== 'move' && tool !== 'loupe') ED.sel = -1;   // the selection only matters while moving / adjusting a loupe
+    edSyncUI();
     edRender();
   }
 
@@ -3612,6 +3809,7 @@
     b.setAttribute('aria-label', 'Colour ' + color);
     b.addEventListener('click', () => {
       ED.color = color;
+      if (ED.annos[ED.sel]) ED.annos[ED.sel].c = color;     // recolours the selected annotation too
       edColorsRow.querySelectorAll('.ed-swatch').forEach(s => s.classList.toggle('active', s === b));
       edUpdateTextTemp();
       edRender();
@@ -3622,6 +3820,7 @@
   edSizeBtn.addEventListener('click', () => {
     ED.size = (ED.size + 1) % ED_SIZE_NAMES.length;
     edSizeBtn.textContent = 'Size: ' + ED_SIZE_NAMES[ED.size];
+    if (ED.annos[ED.sel]) ED.annos[ED.sel].s = ED.size;      // resizes the selected annotation too
     edUpdateTextTemp();
     edRender();
   });
@@ -3629,15 +3828,39 @@
   document.getElementById('edUndo').addEventListener('click', () => {
     ED.annos.pop();
     if (!ED.annos.length) ED.annoKey = '';
+    if (ED.sel >= ED.annos.length) ED.sel = -1;
+    edSyncUI();
     edRender();
   });
 
   document.getElementById('edClear').addEventListener('click', () => {
     ED.annos = [];
     ED.annoKey = '';
+    ED.sel = -1;
     ED.temp = null;
     ED.textPos = null;
     edTextInput.value = '';
+    edSyncUI();
+    edRender();
+  });
+
+  edDeleteBtn.addEventListener('click', () => {
+    if (!ED.annos[ED.sel]) return;
+    ED.annos.splice(ED.sel, 1);
+    ED.sel = -1;
+    if (!ED.annos.length) ED.annoKey = '';
+    edSyncUI();
+    edRender();
+  });
+
+  /* Zoom: changes the selected loupe; with the Loupe tool it is also the zoom for the next one. */
+  edZoomInput.addEventListener('input', () => {
+    const v = parseFloat(edZoomInput.value) || 2.5;
+    const a = ED.annos[ED.sel];
+    const selLoupe = !!a && a.t === 'loupe';
+    if (selLoupe) a.z = v;
+    if (ED.tool === 'loupe' || !selLoupe) ED.loupeZoom = v;
+    edZoomVal.textContent = v.toFixed(1) + '×';
     edRender();
   });
 
@@ -3693,7 +3916,7 @@
     edTabCrop.classList.toggle('active', !anno);
     edTabAnno.classList.toggle('active', anno);
     setTitle(edTitle, ED.file ? ED.file.name : 'Edit',
-      anno ? 'Draw an arrow or circle, or add text' : 'Corners fix perspective; edge dots crop without skew');
+      anno ? 'Draw, or use Move to reposition' : 'Corners fix perspective; edge dots crop without skew');
   }
 
   edTabCrop.addEventListener('click', () => edSwitchTab('crop'));
