@@ -369,16 +369,6 @@
       line-height: 1.2;
     }
 
-    .action-grid.triple {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-    }
-
-    .action-grid.triple .btn-action {
-      font-size: 13px;
-      padding: 14px 4px;
-    }
-
     .btn-action {
       width: 100%;
       background: var(--accent-color);
@@ -634,7 +624,7 @@
 
   <div class="header">
     <div>
-      <h1>QUICK SHARE 1.0.1</h1>
+      <h1>QUICK SHARE 1.0.2</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -659,19 +649,15 @@
       <div class="select-col">
         <label class="card-title" for="sizeSelect">Scale Size</label>
         <select class="select" id="sizeSelect">
-          <optgroup label="Percentage">
-            <option value="p30">30%</option>
-            <option value="p40">40%</option>
-            <option value="p50" selected>50%</option>
-            <option value="p60">60%</option>
-            <option value="p70">70%</option>
-            <option value="p80">80%</option>
-            <option value="p90">90%</option>
-            <option value="p100">100%</option>
-          </optgroup>
-          <optgroup label="Max size (never enlarged)">
+          <optgroup label="Max size">
             <option value="b1080">1080p</option>
             <option value="b720">720p</option>
+          </optgroup>
+          <optgroup label="Percentage">
+            <option value="p40">25%</option>
+            <option value="p50" selected>50%</option>
+            <option value="p70">75%</option>
+            <option value="p100">100%</option>
           </optgroup>
         </select>
       </div>
@@ -705,9 +691,6 @@
     <div id="dualActionContainer" class="action-grid" style="display: none;">
       <button class="btn-action btn-secondary" id="zipButton">
         📦 Download ZIP
-      </button>
-      <button class="btn-action btn-secondary" id="shareZipButton" style="display: none;">
-        📤 Share ZIP
       </button>
       <button class="btn-action ready-state" id="shareButton">
         📤 Share
@@ -826,9 +809,6 @@
   let boxShort = 1080;
   let boxTag = '1080p';
   let currentFormat = 'image/jpeg';
-  let zipCache = null;             // { blob, file } prebuilt for sharing when small enough
-  let zipToken = 0;
-  let shareSupported = false;
   let thumbObjectUrls = [];
   let isProcessed = false;
   let totalOriginalSize = 0;
@@ -866,7 +846,6 @@
   const dualActionContainer = document.getElementById('dualActionContainer');
   const zipButton = document.getElementById('zipButton');
   const shareButton = document.getElementById('shareButton');
-  const shareZipButton = document.getElementById('shareZipButton');
   const loader = document.getElementById('loader');
   const loaderText = document.getElementById('loaderText');
   const progressFill = document.getElementById('progressFill');
@@ -1310,9 +1289,6 @@
     isProcessed = false;
     processedFilesCache = [];
     shareOffset = 0;
-    zipToken++;
-    zipCache = null;
-    setShareZipVisible(false);
     singleActionContainer.style.display = 'block';
     dualActionContainer.style.display = 'none';
     actionButton.classList.remove('ready-state');
@@ -1909,7 +1885,6 @@
       dualActionContainer.style.display = 'grid';
       shareOffset = 0;
       updateShareButtonLabel();
-      prepareShareZip();           // runs in the background; reveals "Share ZIP" when it qualifies
 
       if (failures.length) {
         const names = failures.slice(0, 5).map(f => `• ${f.name}`).join('\n');
@@ -1991,8 +1966,6 @@
   /* ------------------------------------------------------------------ *
    * Output
    * ------------------------------------------------------------------ */
-  let zipShareLimit = 20 * 1024 * 1024;   // offer "Share ZIP" only below this size (learns from failures)
-
   function zipFileName() {
     return `${naming.prefix ? sanitizeNamePart(naming.prefix) : 'QuickShare'}_${sizeTag()}.zip`;
   }
@@ -2015,60 +1988,8 @@
     setTimeout(() => URL.revokeObjectURL(downloadUrl), 10000);
   }
 
-  function setShareZipVisible(visible) {
-    shareZipButton.style.display = visible ? 'flex' : 'none';
-    dualActionContainer.classList.toggle('triple', !!visible);
-    zipButton.textContent = visible ? '📦 Save ZIP' : '📦 Download ZIP';
-  }
-
-  /* Builds the ZIP ahead of time when it is small enough to share, so the tap
-     on "Share ZIP" can call navigator.share() immediately (it needs a fresh gesture). */
-  async function prepareShareZip() {
-    if (!shareSupported || typeof JSZip !== 'function') return;
-    const files = processedFilesCache.slice();
-    const bytes = files.reduce((acc, f) => acc + f.size, 0);
-    if (!files.length || bytes >= zipShareLimit) return;
-
-    const token = ++zipToken;
-    try {
-      const blob = await buildZipBlob(files);
-      if (token !== zipToken || !isProcessed) return;        // settings changed meanwhile
-      if (blob.size >= zipShareLimit) return;
-      const file = new File([blob], zipFileName(), { type: 'application/zip' });
-      if (!navigator.canShare({ files: [file] })) return;
-      zipCache = { blob, file };
-      setShareZipVisible(true);
-    } catch (err) {
-      console.warn('Could not prepare a shareable ZIP:', err);
-    }
-  }
-
-  async function shareZipNow() {
-    if (!zipCache || isSharing) return;
-    isSharing = true;
-    try {
-      await navigator.share({ files: [zipCache.file] });
-    } catch (err) {
-      if (!err || err.name !== 'AbortError') {
-        // Android refuses big hand-overs. Remember half of this size as the new ceiling,
-        // and stop offering Share ZIP for this batch (Save ZIP keeps working).
-        const size = zipCache ? zipCache.blob.size : 0;
-        if (size > 0) {
-          zipShareLimit = Math.floor(size / 2);
-          store('qs_zip_limit', String(zipShareLimit));
-        }
-        setShareZipVisible(false);
-        const detail = err ? ((err.name ? err.name + ': ' : '') + (err.message || '')) : 'unknown error';
-        alert('Sharing the ZIP failed (' + (size / (1024 * 1024)).toFixed(1) + ' MB)\n' + detail + '\n\nUse Save ZIP instead.');
-      }
-    } finally {
-      isSharing = false;
-    }
-  }
-
   async function downloadAllZip() {
     if (processedFilesCache.length === 0 || isBusy) return;
-    if (zipCache) { saveBlobAs(zipCache.blob, zipCache.file.name); return; }
     if (typeof JSZip !== 'function') {
       alert('The ZIP library is not loaded. Reconnect once so it can be cached for offline use.');
       return;
@@ -2311,7 +2232,6 @@
   actionButton.addEventListener('click', () => { if (!isProcessed) processAllImages(); });
   zipButton.addEventListener('click', downloadAllZip);
   shareButton.addEventListener('click', shareNow);
-  shareZipButton.addEventListener('click', shareZipNow);
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !settingsSheet.hidden) closeSettings();
@@ -2343,9 +2263,6 @@
     if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'auto') themePref = savedTheme;
     applyTheme();
 
-    const savedZipLimit = parseInt(read('qs_zip_limit'), 10);
-    if (isFinite(savedZipLimit) && savedZipLimit >= 0) zipShareLimit = Math.min(zipShareLimit, savedZipLimit);
-
     const savedChunk = parseInt(read('qs_share_chunk'), 10);
     if (isFinite(savedChunk) && savedChunk > 0) shareChunkSize = savedChunk;
 
@@ -2360,8 +2277,7 @@
     }
 
     // No share sheet on this device, so give the whole bar to the ZIP download.
-    shareSupported = canShareFiles();
-    if (!shareSupported) {
+    if (!canShareFiles()) {
       shareButton.hidden = true;
       shareButton.style.display = 'none';
       dualActionContainer.classList.add('single-action');
