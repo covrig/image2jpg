@@ -7,11 +7,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="HEIC Share">
+  <meta name="apple-mobile-web-app-title" content="IMAGE2JPG">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <title>HEIC SHARE</title>
+  <title>IMAGE2JPG</title>
 
   <!-- libheif is loaded lazily (inside Web Workers) the first time a HEIC file is added -->
   <!-- JSZip for ZIP archive downloads -->
@@ -178,12 +178,6 @@
       color: var(--accent-color);
     }
 
-    .controls-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
 
 
 
@@ -325,7 +319,7 @@
     /* Any other format gets lime before conversion */
     .thumb-ext.is-heic     { color: #ffffff; }
     .thumb-ext.is-other    { color: #00ff00; }
-    /* After conversion everything turns accent blue */
+    /* After conversion everything turns accent lime */
     .thumb-ext.is-converted{ color: #00ff00; }
     .thumb-ext.is-failed   { color: var(--danger-color); }
 
@@ -745,7 +739,7 @@
 
   <div class="header">
     <div>
-      <h1>HEIC SHARE 1.1.1</h1>
+      <h1>IMAGE2JPG 1.2</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -775,18 +769,22 @@
             <option value="b720">720p</option>
           </optgroup>
           <optgroup label="Percentage">
-            <option value="p40">25%</option>
+            <option value="p25">25%</option>
             <option value="p50" selected>50%</option>
-            <option value="p70">75%</option>
+            <option value="p75">75%</option>
             <option value="p100">100%</option>
           </optgroup>
         </select>
       </div>
       <div class="select-col">
-        <label class="card-title" for="formatSelect">Format</label>
-        <select class="select" id="formatSelect">
-          <option value="image/jpeg" selected>JPG</option>
-          <option value="original">Original</option>
+        <label class="card-title" for="qualitySelect">Quality</label>
+        <select class="select" id="qualitySelect">
+          <option value="60">60%</option>
+          <option value="70">70%</option>
+          <option value="80">80%</option>
+          <option value="85" selected>85%</option>
+          <option value="90">90%</option>
+          <option value="100">100%</option>
         </select>
       </div>
     </div>
@@ -929,7 +927,8 @@
   let boxLong = 1920;              // 'box' mode: longest-side / shortest-side limits
   let boxShort = 1080;
   let boxTag = '1080p';
-  let currentFormat = 'image/jpeg';
+  let currentQuality = 0.85;       // JPEG quality, 0.6 – 1.0
+  const OUTPUT_MIME = 'image/jpeg';
   let thumbObjectUrls = [];
   let isProcessed = false;
   let totalOriginalSize = 0;
@@ -972,7 +971,7 @@
   const progressFill = document.getElementById('progressFill');
   const progressLabel = document.getElementById('progressLabel');
   const sizeSelect = document.getElementById('sizeSelect');
-  const formatSelect = document.getElementById('formatSelect');
+  const qualitySelect = document.getElementById('qualitySelect');
   const settingsSheet = document.getElementById('settingsSheet');
   const namePreview = document.getElementById('namePreview');
   const metaThemeColor = document.getElementById('metaThemeColor');
@@ -1102,8 +1101,9 @@
     invalidateProcessedCache();
   }
 
-  function applyFormatChoice() {
-    currentFormat = formatSelect.value;
+  function applyQualityChoice() {
+    const q = parseInt(qualitySelect.value, 10);
+    currentQuality = (isFinite(q) && q >= 1 && q <= 100 ? q : 85) / 100;
     invalidateProcessedCache();
   }
 
@@ -1213,10 +1213,8 @@
     const sample = selectedFiles[0];
     const base = sample ? stripExt(sample.name) : 'photo';
     const when = sample ? sample.file.lastModified : Date.now();
-    const ext = currentFormat === 'original' && sample && !sample.isHeic
-      ? extFromMime(sample.type) : 'jpg';
-    const first = buildFileName(base, when, 0, ext);
-    const second = buildFileName(sample ? base : 'sunset', when, 1, ext);
+    const first = buildFileName(base, when, 0, 'jpg');
+    const second = buildFileName(sample ? base : 'sunset', when, 1, 'jpg');
     namePreview.innerHTML = `${first}<br>${second}`;
   }
 
@@ -1492,9 +1490,9 @@
   function resetApp() {
     clearSelection();
     sizeSelect.value = 'p50';
-    formatSelect.value = 'image/jpeg';
+    qualitySelect.value = '85';
     applySizeChoice();
-    applyFormatChoice();
+    applyQualityChoice();
   }
 
   function clearOldThumbUrls() {
@@ -1878,21 +1876,14 @@
     });
   }
 
-  function pickOutputMime(fileObj) {
-    let targetMime = currentFormat === 'original' ? fileObj.type : 'image/jpeg';
-    if (!targetMime || fileObj.isHeic || /hei[cf]/.test(targetMime)) targetMime = 'image/jpeg';
-    if (!/^image\/(jpeg|png|webp)$/.test(targetMime)) targetMime = 'image/jpeg';
-    return targetMime;
-  }
-
   async function makeConvertJob(i) {
     const fileObj = selectedFiles[i];
     const buffer = await fileObj.src.arrayBuffer();
     return {
       msg: {
         id: i, op: 'convert', buffer,
-        heic: fileObj.isHeic, mime: fileObj.type, outMime: pickOutputMime(fileObj),
-        scaleMode, scale: currentScale, boxLong, boxShort, quality: 0.88
+        heic: fileObj.isHeic, mime: fileObj.type, outMime: OUTPUT_MIME,
+        scaleMode, scale: currentScale, boxLong, boxShort, quality: currentQuality
       },
       transfer: [buffer]
     };
@@ -2023,6 +2014,7 @@
           console.warn('Worker pool unavailable, converting on the main thread', err);
           results.fill(null);
           failures.length = 0;
+          resetThumbBadges();   // clear any FAILED marks left by the aborted worker run
         }
       }
 
@@ -2046,7 +2038,7 @@
         if (r.file) {
           outFile = r.file;
         } else {
-          const mime = r.blob.type || pickOutputMime(selectedFiles[i]);
+          const mime = r.blob.type || OUTPUT_MIME;
           const name = makeUnique(
             buildFileName(stripExt(selectedFiles[i].name), selectedFiles[i].file.lastModified, i, extFromMime(mime)),
             usedNames
@@ -2071,7 +2063,7 @@
       isProcessed = true;
       const totalConvertedSize = processedFilesCache.reduce((acc, f) => acc + f.size, 0);
       const doneOriginal = selectedFiles
-        .filter(f => !failures.some(x => x.name === f.name))
+        .filter(f => f.converted)
         .reduce((acc, f) => acc + f.size, 0);
       updateSizeStats(doneOriginal, totalConvertedSize);
 
@@ -2096,12 +2088,8 @@
   async function convertOne(fileObj, position, usedNames) {
     const isHeic = fileObj.isHeic;
 
-    let targetMime = currentFormat === 'original' ? fileObj.type : 'image/jpeg';
-    if (!targetMime || isHeic || /hei[cf]/.test(targetMime)) targetMime = 'image/jpeg';
-    // Canvas can only encode these; anything else falls back to JPEG.
-    if (!/^image\/(jpeg|png|webp)$/.test(targetMime)) targetMime = 'image/jpeg';
-
-    const opaque = targetMime === 'image/jpeg';
+    const targetMime = OUTPUT_MIME;
+    const opaque = true;             // JPEG has no alpha: flatten onto white
     let finalBlob = null;
 
     if (isHeic) {
@@ -2110,7 +2098,7 @@
       const target = computeTarget(width, height);
 
       const scaled = paintToCanvas(canvas, target.w, target.h, opaque);
-      finalBlob = await canvasToBlob(scaled, targetMime, 0.88);
+      finalBlob = await canvasToBlob(scaled, targetMime, currentQuality);
 
       canvas.width = 0; canvas.height = 0;
       scaled.width = 0; scaled.height = 0;
@@ -2133,7 +2121,7 @@
       const canvas = paintToCanvas(bitmap, target.w, target.h, opaque);
       bitmap.close();
 
-      finalBlob = await canvasToBlob(canvas, targetMime, 0.88);
+      finalBlob = await canvasToBlob(canvas, targetMime, currentQuality);
       canvas.width = 0; canvas.height = 0;
     }
 
@@ -2201,7 +2189,7 @@
       });
       saveBlobAs(zipContent, zipFileName());
     } catch (err) {
-      alert('The ZIP archive could not be built: ' + (err && err.message ? err && err.message : err));
+      alert('The ZIP archive could not be built: ' + (err && err.message ? err.message : err));
     } finally {
       hideProgress();
       isBusy = false;
@@ -2401,7 +2389,7 @@
   });
 
   sizeSelect.addEventListener('change', applySizeChoice);
-  formatSelect.addEventListener('change', applyFormatChoice);
+  qualitySelect.addEventListener('change', applyQualityChoice);
 
   document.getElementById('themeBtn').addEventListener('click', cycleTheme);
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
