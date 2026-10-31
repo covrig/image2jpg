@@ -1,8 +1,8 @@
 {
-  "name": "HEIC Share — Image Resizer/Converter",
-  "short_name": "HEIC Share",
-  "description": "Resize, convert and share HEIC images entirely on your device. Works offline.",
-  "start_url": "./index.html",
+  "name": "Quick Share — Image Resizer, Converter",
+  "short_name": "IMAGE2JPG",
+  "description": "Resize, convert and share images entirely on your device. Works offline.",
+  "start_url": "./image_converter_share.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
