@@ -935,7 +935,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.3.6</h1>
+      <h1>IMAGE2JPG 1.3.7</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -2038,7 +2038,11 @@
   }
 
   async function decodeHeic(buffer, preferThumb) {
-    if (!lib) lib = libheif();
+    if (!lib) {
+      // Fetched only when a HEIC file really needs decoding, so JPG / PNG still convert if the CDN is unreachable.
+      importScripts(LIBHEIF_URL_W);
+      lib = libheif();
+    }
     const imgs = new lib.HeifDecoder().decode(new Uint8Array(buffer));
     if (!imgs || !imgs.length) throw new Error('Could not decode HEIC image.');
     let im = imgs[0];
@@ -2115,7 +2119,7 @@
     if (!workerUrl) {
       // The edit functions are written once in this file and copied into the worker as source text.
       const shared = [cropDims, warpQuad, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
-      const src = "importScripts('" + LIBHEIF_URL + "');\n" + shared + "\n" + WORKER_BODY;
+      const src = "const LIBHEIF_URL_W = '" + LIBHEIF_URL + "';\n" + shared + "\n" + WORKER_BODY;
       workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
     }
     return workerUrl;
@@ -3557,6 +3561,13 @@
   /* ---- Selecting and moving annotations ---- */
   const edLoupeSource = (a) => ({ x: a.sx === undefined ? a.x1 : a.sx, y: a.sy === undefined ? a.y1 : a.sy });
 
+  /* True when the magnified spot lies outside the bubble, so it has its own handle. */
+  function edLoupeDetached(a) {
+    const r = ED.rect, s = edLoupeSource(a);
+    const rad = Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h);
+    return Math.hypot((s.x - a.x1) * r.w, (s.y - a.y1) * r.h) > rad;
+  }
+
   function edSegDist(p, a, b) {
     const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
     let t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0;
@@ -3636,15 +3647,17 @@
       ctx.beginPath();
       ctx.arc(cx, cy, rad + 6, 0, Math.PI * 2);
       outline();
-      ctx.setLineDash([]);
-      const s = edLoupeSource(a);                    // handle for the magnified spot
-      ctx.beginPath();
-      ctx.arc(r.x + s.x * r.w, r.y + s.y * r.h, 9, 0, Math.PI * 2);
-      ctx.fillStyle = '#3880ff';
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
+      if (edLoupeDetached(a)) {                      // handle for the magnified spot
+        ctx.setLineDash([]);
+        const s = edLoupeSource(a);
+        ctx.beginPath();
+        ctx.arc(r.x + s.x * r.w, r.y + s.y * r.h, 9, 0, Math.PI * 2);
+        ctx.fillStyle = '#3880ff';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+      }
     } else {
       const b = edAnnoBounds(a);
       ctx.beginPath();
@@ -3659,7 +3672,9 @@
     const cur = ED.annos[ED.sel];
     if (cur && cur.t === 'loupe') {                  // drag the blue dot to change what is magnified
       const s = edLoupeSource(cur);
-      if (Math.hypot(r.x + s.x * r.w - p.x, r.y + s.y * r.h - p.y) <= 18) {
+      // The dot only exists once the bubble has been moved off its spot; while the spot is still
+      // under the bubble, dragging anywhere on the bubble moves the bubble.
+      if (edLoupeDetached(cur) && Math.hypot(r.x + s.x * r.w - p.x, r.y + s.y * r.h - p.y) <= 18) {
         ED.drag = { mode: 'loupeSrc', idx: ED.sel, orig: Object.assign({}, cur), start: p };
         return;
       }
