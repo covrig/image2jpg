@@ -364,11 +364,6 @@
       grid-template-columns: 1fr;
     }
 
-    #shareButton {
-      white-space: pre-line;
-      line-height: 1.2;
-    }
-
     .btn-action {
       width: 100%;
       background: var(--accent-color);
@@ -624,7 +619,7 @@
 
   <div class="header">
     <div>
-      <h1>QUICK SHARE 1.0.2</h1>
+      <h1>QUICK SHARE 1.0.3</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -2053,7 +2048,7 @@
     if (shareChunkSize > 0 && total > shareChunkSize) {
       const from = shareOffset + 1;
       const to = Math.min(shareOffset + shareChunkSize, total);
-      shareButton.textContent = `📤 Share ${from}–${to}\nof ${total}`;
+      shareButton.textContent = `📤 Share ${from}–${to} of ${total}`;
     } else {
       shareButton.textContent = '📤 Share';
     }
