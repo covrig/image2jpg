@@ -1,5 +1,5 @@
 /* IMAGE2JPG service worker: offline app shell */
-const VERSION = 'IMAGE2JPG-v1.6.1';
+const VERSION = 'IMAGE2JPG-v1.6.2';
 
 const CORE = [
   './',
