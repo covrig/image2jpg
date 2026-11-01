@@ -1,5 +1,5 @@
 /* Quick Share service worker — offline app shell */
-const VERSION = 'IMAGE2JPG-v1.5.4';
+const VERSION = 'IMAGE2JPG-v1.5.5';
 const CORE = [
   './',
   './image_converter_share.html',
