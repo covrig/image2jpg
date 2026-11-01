@@ -11,11 +11,11 @@ no server, no accounts.
 - **True format detection** from file bytes, not the extension or MIME type, so a JPEG saved as `.heic` (or vice versa) is still handled correctly
 - **Scale presets** — 1080p / 720p box fit, or 25 / 50 / 75 / 100 % 
 - **JPEG quality**
-- **Built-in editor** — crop with draggable corners, straighten slider (−45° to +45°), perspective correction, plus annotations: arrow, circle, rectangle, loupe (1.5×–8×), move and text
-- **Full-screen viewer** — pinch/wheel zoom (up to 8×), pan, double-tap zoom, swipe/arrow-key navigation
-- **Custom file naming** — prefix, keep original name, date stamp, suffix, quality tag, zero-padded index with custom start, digit count and separator
+- **Built-in editor** — crop with draggable corners, autocrop, straighten slider (−45° to +45°), perspective correction, plus annotations: arrow, circle, rectangle, loupe and text
+- **Full-screen viewer**
+- **Custom file naming** — prefix, keep original name, date stamp, suffix, quality tag
 - **Export** — ZIP download (`compression: STORE`, since JPEGs are already compressed) or native share sheet
-- **Works on phones and desktop** — responsive mobile layout plus a wide two-column desktop layout; PWA with install prompt and service worker for offline use
+- **Works on phones and desktop** —  PWA with install prompt and service worker for offline use
 
 ## Usage
 
@@ -30,10 +30,6 @@ no server, no accounts.
 ## Output naming
 
 Default pattern: `Image_01.jpg` — configurable via the ⚙ settings sheet.
-Example with date + quality: `Image_2026_Oct_31_q80_01.jpg`
-
-Duplicate names are resolved automatically by appending `-2`, `-3`, …
-
 ZIP file name follows the batch: `Images_50pct_q80_12items_oct_26.zip`
 
 ## How it works
@@ -43,8 +39,6 @@ ZIP file name follows the batch: `Images_50pct_q80_12items_oct_26.zip`
 - HEIC images are decoded with `libheif-js` 1.23.2; each decode has a 30 s timeout
   so a stuck WASM call cannot hang the progress overlay
 - Transparent pixels are flattened onto white, since JPEG has no alpha channel
-- Perspective crop uses a bilinear projective warp (Heckbert), capped at ~2× the
-  output size to stay sharp and memory-friendly
 - If workers are unavailable, the app falls back to main-thread conversion
 - File bytes are copied into memory immediately on add, so cloud-synced or
   permission-revoked files cannot break the conversion later
@@ -59,22 +53,22 @@ On devices with no file-share support, the action bar shows the ZIP download onl
 
 ## Requirements & limits
 
-- Internet access is needed on first use to fetch `jszip` and the HEIC decoder,
-  after which they are cached for offline use
+- Internet access is needed on first use to fetch js files after which they are cached for offline use
 - All processing happens locally in the browser — no image ever leaves the device
 - Large batches may hit browser memory limits on low-RAM devices
 
 ## Dependencies
 
-- [JSZip 3.10.1](https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js) — ZIP archives
-- [libheif-js 1.23.2](https://cdn.jsdelivr.net/npm/libheif-js@1.23.2/libheif-wasm/libheif-bundle.js) — HEIC/HEIF decoding via WASM
+- JSZip ZIP archives
+- libheif-js HEIC/HEIF decoding
+- jscanify  auto crop
+- opencv auto crop
 
 ## Files
 
 - `index.html` — the whole app (HTML, CSS, JS)
 - `sw.js` — service worker for offline caching
 - `manifest.webmanifest` — PWA manifest
-- `favicon.png`, `apple-touch-icon.png`
 
 ## Run locally
 
