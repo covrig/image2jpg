@@ -15,7 +15,7 @@
 
   <!-- libheif is loaded lazily (inside Web Workers) the first time a HEIC file is added -->
   <!-- JSZip for ZIP archive downloads -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="vendor/jszip.min.js"></script>
 
   <style>
     :root {
@@ -801,6 +801,7 @@
     .ed-lbl { font-size: 12px; font-weight: 700; color: #8e8e93; flex: 0 0 auto; }
     .ed-row input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--accent-color); }
     #edToolsAnno .ov-btn { padding: 8px 10px; font-size: 13px; }
+    #edToolsCrop .ov-btn { padding: 8px 9px; font-size: 13px; }
     #edZoomVal { flex: 0 0 44px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     #edAngleVal { flex: 0 0 52px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     #edTextRow input[type="text"] { flex: 1 1 auto; min-width: 0; text-align: center; }
@@ -943,7 +944,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.5.7</h1>
+      <h1>IMAGE2JPG 1.6</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1146,6 +1147,7 @@
       </div>
       <div class="ed-row">
         <button class="ov-btn" id="edRotate" type="button">⟳ Rotate 90°</button>
+        <button class="ov-btn" id="edAuto" type="button" title="Detect the document edges automatically">📄 Auto crop</button>
         <button class="ov-btn" id="edFull" type="button">Reset C/S</button>
         <button class="ov-btn" id="edResetAll" type="button">Reset C/S/An</button>
       </div>
@@ -1881,7 +1883,7 @@
    * HEIC decoding
    * ------------------------------------------------------------------ */
   let heifModuleInstance = null;
-  const LIBHEIF_URL = 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.2/libheif-wasm/libheif-bundle.js';
+  const LIBHEIF_URL = new URL('vendor/libheif-bundle.js', document.baseURI).href;
   let heifLoadPromise = null;
   function loadLibheifMain() {
     if (typeof window.libheif === 'function') return Promise.resolve();
@@ -3951,6 +3953,239 @@
     ED.baseCanvas = null;
     ED.baseKey = '';
     edRender();
+  });
+
+  /* ---- Auto crop: jscanify (on OpenCV.js) finds the document's four corners ---- */
+  const OPENCV_URL = 'vendor/opencv.js';
+  const JSCANIFY_URL = 'vendor/jscanify.min.js';
+  let scannerPromise = null;
+
+  function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Could not load ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  /* Fetched only the first time Auto crop is used (OpenCV.js is large); then kept for the session. */
+  function getScanner() {
+    if (!scannerPromise) {
+      scannerPromise = (async () => {
+        await Promise.all([
+          typeof window.jscanify === 'function' ? null : loadScriptOnce(JSCANIFY_URL),
+          (window.cv && window.cv.Mat) ? null : loadScriptOnce(OPENCV_URL)
+        ]);
+        await new Promise((resolve, reject) => {          // opencv.js finishes starting up after it loads
+          const t0 = Date.now();
+          (function check() {
+            if (window.cv && window.cv.Mat) return resolve();
+            if (Date.now() - t0 > 90000) return reject(new Error('OpenCV took too long to start.'));
+            setTimeout(check, 100);
+          })();
+        });
+        if (typeof window.jscanify !== 'function') throw new Error('jscanify did not load.');
+        return new window.jscanify();
+      })().catch(err => { scannerPromise = null; throw err; });
+    }
+    return scannerPromise;
+  }
+
+  /* ---- Colour-aware detector (first choice) ----
+     jscanify looks at brightness only, so a bright yellow sign on a white wall or a pale
+     railing has no contrast for it. This looks at brightness AND colour (saturation, Lab a/b),
+     keeps blobs that simplify to a convex four-sided shape, and scores them. */
+  function quadPoly(q) {                                   // area of a quad, shoelace
+    let a = 0;
+    for (let i = 0; i < 4; i++) { const p = q[i], n = q[(i + 1) % 4]; a += p.x * n.y - n.x * p.y; }
+    return Math.abs(a) / 2;
+  }
+
+  function quadConvexPx(q) {
+    for (let i = 0; i < 4; i++) {
+      const a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+      if ((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x) <= 0) return false;
+    }
+    return true;
+  }
+
+  function orderQuadPx(pts) {                              // -> TL, TR, BR, BL
+    let tl = pts[0], br = pts[0], tr = pts[0], bl = pts[0];
+    pts.forEach(p => {
+      if (p.x + p.y < tl.x + tl.y) tl = p;
+      if (p.x + p.y > br.x + br.y) br = p;
+      if (p.x - p.y > tr.x - tr.y) tr = p;
+      if (p.x - p.y < bl.x - bl.y) bl = p;
+    });
+    return new Set([tl, tr, br, bl]).size === 4 ? [tl, tr, br, bl] : null;
+  }
+
+  /* How much a four-cornered shape looks like a page: big, matches its blob, not ragged,
+     and not stuck to the photo's edge (that is usually the wall, not the page). */
+  function scoreQuadPx(q, ca, ha, W, H) {
+    const qa = quadPoly(q);
+    if (qa <= 0 || ca <= 0) return 0;
+    const fill = Math.min(ca, qa) / Math.max(ca, qa);
+    const solid = ha > 0 ? Math.min(1, ca / ha) : 0;
+    const m = 0.012;
+    let touch = 0;
+    q.forEach(p => { if (p.x < m * W || p.x > (1 - m) * W || p.y < m * H || p.y > (1 - m) * H) touch++; });
+    return Math.sqrt(qa / (W * H)) * fill * solid * Math.pow(0.45, touch);
+  }
+
+  function detectColorAware(canvas) {
+    const cvl = window.cv;
+    const W = canvas.width, H = canvas.height, total = W * H;
+    const trash = [];
+    const T = (m) => { trash.push(m); return m; };
+    let best = null;
+    try {
+      const rgba = T(cvl.imread(canvas));
+      const rgb = T(new cvl.Mat());   cvl.cvtColor(rgba, rgb, cvl.COLOR_RGBA2RGB);
+      const gray = T(new cvl.Mat());  cvl.cvtColor(rgb, gray, cvl.COLOR_RGB2GRAY);
+      const hsv = T(new cvl.Mat());   cvl.cvtColor(rgb, hsv, cvl.COLOR_RGB2HSV);
+      const lab = T(new cvl.Mat());   cvl.cvtColor(rgb, lab, cvl.COLOR_RGB2Lab);
+      const hsvP = T(new cvl.MatVector()); cvl.split(hsv, hsvP);
+      const labP = T(new cvl.MatVector()); cvl.split(lab, labP);
+      const chans = [gray, T(hsvP.get(1)), T(labP.get(1)), T(labP.get(2))];   // brightness, saturation, Lab a, Lab b
+      const ks = Math.max(3, Math.floor(W / 60)) | 1;
+      const kernel = T(cvl.getStructuringElement(cvl.MORPH_RECT, new cvl.Size(ks, ks)));
+      const margin = 0.012;
+
+      chans.forEach(ch => {
+        const blur = T(new cvl.Mat());  cvl.GaussianBlur(ch, blur, new cvl.Size(7, 7), 0, 0, cvl.BORDER_DEFAULT);
+        const th = T(new cvl.Mat());    cvl.threshold(blur, th, 0, 255, cvl.THRESH_BINARY + cvl.THRESH_OTSU);
+        const inv = T(new cvl.Mat());   cvl.bitwise_not(th, inv);
+        [th, inv].forEach(mask => {
+          const closed = T(new cvl.Mat()); cvl.morphologyEx(mask, closed, cvl.MORPH_CLOSE, kernel);
+          const opened = T(new cvl.Mat()); cvl.morphologyEx(closed, opened, cvl.MORPH_OPEN, kernel);
+          const contours = T(new cvl.MatVector());
+          const hier = T(new cvl.Mat());
+          cvl.findContours(opened, contours, hier, cvl.RETR_EXTERNAL, cvl.CHAIN_APPROX_SIMPLE);
+          for (let i = 0; i < contours.size(); i++) {
+            const c = contours.get(i);
+            const hull = new cvl.Mat();
+            try {
+              const ca = cvl.contourArea(c);
+              if (ca < 0.08 * total || ca > 0.95 * total) continue;
+              cvl.convexHull(c, hull, false, true);
+              const ha = cvl.contourArea(hull);
+              const peri = cvl.arcLength(hull, true);
+              let pts = null;
+              for (const eps of [0.01, 0.015, 0.02, 0.03, 0.04, 0.06, 0.08]) {
+                const ap = new cvl.Mat();
+                try {
+                  cvl.approxPolyDP(hull, ap, eps * peri, true);
+                  if (ap.rows === 4) {
+                    const d = ap.data32S;
+                    pts = [{ x: d[0], y: d[1] }, { x: d[2], y: d[3] }, { x: d[4], y: d[5] }, { x: d[6], y: d[7] }];
+                  }
+                } finally { ap.delete(); }
+                if (pts) break;
+              }
+              if (!pts) continue;
+              const q = orderQuadPx(pts);
+              if (!q || !quadConvexPx(q)) continue;
+              const qa = quadPoly(q);
+              if (qa < 0.08 * total) continue;
+              const score = scoreQuadPx(q, ca, ha, W, H);
+              if (!best || score > best.score) best = { score: score, q: q };
+            } finally { c.delete(); hull.delete(); }
+          }
+        });
+      });
+    } finally {
+      trash.forEach(m => { try { m.delete(); } catch (e) { /* ignore */ } });
+    }
+    return best;                                           // { score, q (pixels) } or null
+  }
+
+  /* Both detectors are scored the same way and the better-looking shape wins:
+     jscanify is good at pages with a clear outline (like printed nameplates),
+     the colour-aware one at brightly coloured signs on plain backgrounds. */
+  function detectDocumentQuad(scanner, canvas) {
+    const W = canvas.width, H = canvas.height;
+    let best = null;
+    try { best = detectColorAware(canvas); }
+    catch (err) { console.warn('Colour-aware detection failed', err); }
+    try {
+      const j = detectWithJscanify(scanner, canvas);
+      if (j && (!best || j.score > best.score)) best = j;
+    } catch (err) { console.warn('jscanify detection failed', err); }
+    if (!best || best.score < 0.12) return null;
+    return best.q.map(p => ({ x: clamp01(p.x / W), y: clamp01(p.y / H) }));
+  }
+
+  /* Returns [TL, TR, BR, BL] in 0..1 of the canvas, or null when no clear document is found. */
+  function detectWithJscanify(scanner, canvas) {
+    const cvl = window.cv;
+    let mat = null, contour = null;
+    try {
+      mat = cvl.imread(canvas);
+      contour = scanner.findPaperContour(mat);
+      if (!contour) return null;
+      const c = scanner.getCornerPoints(contour);
+      if (!c || !c.topLeftCorner || !c.topRightCorner || !c.bottomRightCorner || !c.bottomLeftCorner) return null;
+      const q = [c.topLeftCorner, c.topRightCorner, c.bottomRightCorner, c.bottomLeftCorner];
+      if (new Set(q.map(p => p.x + ',' + p.y)).size < 4 || !quadConvexPx(q)) return null;
+      const W = canvas.width, H = canvas.height;
+      const qa = quadPoly(q);
+      if (qa < 0.05 * W * H || qa > 0.95 * W * H) return null;   // tiny blob, or just the whole frame
+      const hull = new cvl.Mat();
+      try {
+        cvl.convexHull(contour, hull, false, true);
+        const score = scoreQuadPx(q, cvl.contourArea(contour), cvl.contourArea(hull), W, H);
+        return { score: score, q: q.map(p => ({ x: p.x, y: p.y })) };
+      } finally { hull.delete(); }
+    } finally {
+      try { if (contour && contour.delete) contour.delete(); } catch (e) { /* ignore */ }
+      try { if (mat && mat.delete) mat.delete(); } catch (e) { /* ignore */ }
+    }
+  }
+
+  let autoBusy = false;
+  document.getElementById('edAuto').addEventListener('click', async () => {
+    if (!ED.bmp || autoBusy) return;
+    const btn = document.getElementById('edAuto');
+    const tok = ED.token;
+    autoBusy = true;
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Detecting…';
+    let work = null;
+    try {
+      const scanner = await getScanner();
+      if (tok !== ED.token || !ED.bmp) return;            // editor was closed meanwhile
+      const k = Math.min(1, 1000 / Math.max(ED.bw, ED.bh));   // detect on a smaller copy: faster, less noisy
+      work = makeMainCanvas(Math.max(1, Math.round(ED.bw * k)), Math.max(1, Math.round(ED.bh * k)));
+      const wctx = work.getContext('2d');
+      wctx.fillStyle = '#ffffff';
+      wctx.fillRect(0, 0, work.width, work.height);
+      wctx.drawImage(ED.bmp, 0, 0, work.width, work.height);
+      await new Promise(r => setTimeout(r, 30));           // let the "Detecting…" label paint
+      const q = detectDocumentQuad(scanner, work);
+      if (!q || !edConvex(q)) {
+        alert('No clear document edges found.\n\nTry a photo where the page sits on a plain, contrasting background, or drag the corners by hand.');
+        return;
+      }
+      ED.base = q;                                         // same corner handles as before, so it can still be adjusted
+      edSetAngle(0);
+      ED.baseCanvas = null;
+      ED.baseKey = '';
+      edRender();
+    } catch (err) {
+      console.error('Auto crop failed:', err);
+      alert('Auto crop is not available right now.\n\n' + (err && err.message ? err.message : err) +
+        '\n\nIt needs a connection the first time, to fetch OpenCV.');
+    } finally {
+      if (work) { work.width = 0; work.height = 0; }
+      btn.disabled = false;
+      btn.textContent = label;
+      autoBusy = false;
+    }
   });
 
   document.getElementById('edFull').addEventListener('click', () => {
