@@ -1,5 +1,5 @@
 /* IMAGE2JPG service worker: offline app shell */
-const VERSION = 'IMAGE2JPG-v1.6.2';
+const VERSION = 'IMAGE2JPG-v1.6.4';
 
 const CORE = [
   './',
@@ -12,32 +12,26 @@ const CORE = [
   './apple-touch-icon.png'
 ];
 
-// Libraries hosted in this project (vendor/ folder), cached at install so HEIC decoding,
-// ZIP building and Auto crop's jscanify part work offline straight away.
+// Every library in the vendor/ folder, cached at install so HEIC decoding, ZIP building
+// and Auto crop (jscanify + OpenCV.js, ~10 MB) all work offline straight away.
 // The filenames must match the <script> / loader URLs in the page exactly.
 const VENDOR = [
   './vendor/libheif-bundle.js',
   './vendor/jszip.min.js',
-  './vendor/jscanify.min.js'
-];
-
-// OpenCV.js is ~10 MB and only needed for Auto crop, so it is NOT fetched at install.
-// It is stored the first time Auto crop runs, in a cache that survives VERSION changes
-// so the big download is not repeated after every app update.
-const LAZY_CACHE = 'IMAGE2JPG-lazy-v1';
-const LAZY_URLS = [
-  new URL('./vendor/opencv.js', self.location).href
+  './vendor/jscanify.min.js',
+  './vendor/opencv.js'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(VERSION);
+    const urls = [...CORE, ...VENDOR];
     // Cache items individually so one bad URL cannot fail the whole install.
     const results = await Promise.allSettled(
-      [...CORE, ...VENDOR].map((url) => cache.add(new Request(url, { cache: 'reload' })))
+      urls.map((url) => cache.add(new Request(url, { cache: 'reload' })))
     );
     results.forEach((r, i) => {
-      if (r.status === 'rejected') console.warn('SW: not cached:', [...CORE, ...VENDOR][i]);
+      if (r.status === 'rejected') console.warn('SW: not cached:', urls[i]);
     });
     await self.skipWaiting();
   })());
@@ -46,7 +40,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== VERSION && k !== LAZY_CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -84,8 +78,7 @@ self.addEventListener('fetch', (event) => {
       const fresh = await fetch(req);
       if (fresh && (fresh.ok || fresh.type === 'opaque')) {
         const copy = fresh.clone();
-        const name = LAZY_URLS.includes(req.url) ? LAZY_CACHE : VERSION;
-        event.waitUntil(caches.open(name).then((c) => c.put(req, copy)).catch(() => {}));
+        event.waitUntil(caches.open(VERSION).then((c) => c.put(req, copy)).catch(() => {}));
       }
       return fresh;
     } catch (e) {
