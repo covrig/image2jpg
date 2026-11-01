@@ -1,5 +1,5 @@
-/* Quick Share service worker — offline app shell */
-const VERSION = 'IMAGE2JPG-v1.6';
+/* IMAGE2JPG service worker: offline app shell */
+const VERSION = 'IMAGE2JPG-v1.6.1';
 
 const CORE = [
   './',
@@ -12,8 +12,9 @@ const CORE = [
   './apple-touch-icon.png'
 ];
 
-// Libraries hosted in this project (vendor/ folder). Cached at install so HEIC decoding,
+// Libraries hosted in this project (vendor/ folder), cached at install so HEIC decoding,
 // ZIP building and Auto crop's jscanify part work offline straight away.
+// The filenames must match the <script> / loader URLs in the page exactly.
 const VENDOR = [
   './vendor/libheif-bundle.js',
   './vendor/jszip.min.js',
@@ -32,9 +33,13 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(VERSION);
     // Cache items individually so one bad URL cannot fail the whole install.
-    await Promise.allSettled(CORE.map((url) => cache.add(new Request(url, { cache: 'reload' }))));
-    await Promise.allSettled(VENDOR.map((url) => cache.add(new Request(url, { cache: 'reload' }))));
-    self.skipWaiting();
+    const results = await Promise.allSettled(
+      [...CORE, ...VENDOR].map((url) => cache.add(new Request(url, { cache: 'reload' })))
+    );
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') console.warn('SW: not cached:', [...CORE, ...VENDOR][i]);
+    });
+    await self.skipWaiting();
   })());
 });
 
@@ -46,24 +51,24 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') self.skipWaiting();
-});
-
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // Navigations: try the network first so updates land, fall back to the cached shell.
+  // Navigations: network first so updates land, fall back to the cached shell.
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req);
-        if (fresh.ok) (await caches.open(VERSION)).put(req, fresh.clone());
+        if (fresh.ok) {
+          const copy = fresh.clone();
+          // waitUntil keeps the worker alive until the copy is stored.
+          event.waitUntil(caches.open(VERSION).then((c) => c.put(req, copy)).catch(() => {}));
+        }
         return fresh;
       } catch (e) {
         return (await caches.match(req, { ignoreSearch: true }))
-            || (await caches.match('./image_converter_share.html'))
+            || (await caches.match('./index.html'))
             || (await caches.match('./'))
             || Response.error();
       }
@@ -78,12 +83,13 @@ self.addEventListener('fetch', (event) => {
     try {
       const fresh = await fetch(req);
       if (fresh && (fresh.ok || fresh.type === 'opaque')) {
-        const cache = await caches.open(LAZY_URLS.includes(req.url) ? LAZY_CACHE : VERSION);
-        cache.put(req, fresh.clone());
+        const copy = fresh.clone();
+        const name = LAZY_URLS.includes(req.url) ? LAZY_CACHE : VERSION;
+        event.waitUntil(caches.open(name).then((c) => c.put(req, copy)).catch(() => {}));
       }
       return fresh;
     } catch (e) {
-      return cached || Response.error();
+      return Response.error();
     }
   })());
 });
