@@ -17,7 +17,7 @@ const CORE = [
 const VENDOR = [
   './vendor/libheif-bundle.js',
   './vendor/jszip.min.js',
-  './vendor/jscanify.js'
+  './vendor/jscanify.min.js'
 ];
 
 // OpenCV.js is ~10 MB and only needed for Auto crop, so it is NOT fetched at install.
