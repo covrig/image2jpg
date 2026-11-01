@@ -155,7 +155,7 @@
     }
 
     .drop-zone {
-      border: 1.5px dashed var(--accent-color);
+      border: 0.5px dashed var(--accent-color);
       border-radius: 10px;
       padding: 14px;
       text-align: center;
@@ -177,9 +177,6 @@
       font-weight: 600;
       color: var(--accent-color);
     }
-
-
-
 
 
     /* ---- Size / format dropdowns ---- */
@@ -808,31 +805,6 @@
     #edAngleVal { flex: 0 0 52px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     #edTextRow input[type="text"] { flex: 1 1 auto; min-width: 0; text-align: center; }
 
-    /* Enhance tab */
-    #edToolsEnh { gap: 4px; }
-    #edToolsEnh .ov-btn { padding: 8px 10px; font-size: 13px; }
-    .enh-row { display: flex; align-items: center; gap: 8px; }
-    .enh-lbl { flex: 0 0 78px; font-size: 12px; font-weight: 700; color: #8e8e93; }
-    .enh-val { flex: 0 0 38px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .enh-row input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--accent-color); }
-    .ov-bar.bottom .ov-btn { padding: 9px 10px; font-size: 13px; }
-
-    /* One-tap batch switch on the main screen */
-    .auto-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
-      padding: 10px 12px;
-      background: var(--inset-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .auto-row small { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; color: var(--text-sub); }
-
     /* Clear sits centred in a strip just above the picture, away from the tool buttons, so it is hard to hit by accident. */
     .ed-clear-float {
       position: absolute;
@@ -971,7 +943,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.5.3</h1>
+      <h1>IMAGE2JPG 1.5.5</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1020,12 +992,6 @@
         </select>
       </div>
     </div>
-    <label class="auto-row" for="autoAll">
-      <input type="checkbox" id="autoAll">
-      <span>✨ Auto-enhance all photos
-        <small>Fixes dark photos, shadows, glares, contrast and sharpness.</small>
-      </span>
-    </label>
   </div>
 
   <div class="card card-preview">
@@ -1169,7 +1135,7 @@
 
     <div class="ed-stage" id="edStage">
       <canvas id="edCanvas"></canvas>
-      <button class="ov-btn ed-clear-float" id="edClear" type="button" hidden>Clear all</button>
+      <button class="ov-btn ed-clear-float" id="edClear" type="button" hidden>CLEAR ALL</button>
     </div>
 
     <div class="ed-tools" id="edToolsCrop">
@@ -1180,8 +1146,8 @@
       </div>
       <div class="ed-row">
         <button class="ov-btn" id="edRotate" type="button">⟳ Rotate 90°</button>
-        <button class="ov-btn" id="edFull" type="button">Reset C/S/R</button>
-        <button class="ov-btn" id="edResetAll" type="button">Reset C/S/R/An</button>
+        <button class="ov-btn" id="edFull" type="button">Reset C/S</button>
+        <button class="ov-btn" id="edResetAll" type="button">Reset C/S/An</button>
       </div>
     </div>
 
@@ -1206,24 +1172,14 @@
       </div>
       <div class="ed-row" id="edZoomRow" hidden>
         <span class="ed-lbl">Loupe zoom</span>
-        <input type="range" id="edZoom" min="1.5" max="8" step="0.1" value="2.5" aria-label="Loupe zoom">
-        <span id="edZoomVal">2.5×</span>
+        <input type="range" id="edZoom" min="2" max="8" step="0.1" value="3" aria-label="Loupe zoom">
+        <span id="edZoomVal">3×</span>
       </div>
-    </div>
-
-    <div class="ed-tools" id="edToolsEnh" hidden>
-      <div class="ed-row">
-        <button class="ov-btn primary" id="edAuto" type="button">✨ Auto-enhance</button>
-        <button class="ov-btn" id="edCompare" type="button">Hold: original</button>
-        <button class="ov-btn" id="edAdjReset" type="button">Reset</button>
-      </div>
-      <div id="edAdjRows"></div>
     </div>
 
     <div class="ov-bar bottom">
       <button class="ov-btn active" id="edTabCrop" type="button">CROP/STR/ROT</button>
       <button class="ov-btn" id="edTabAnno" type="button">ANNOTATE</button>
-      <button class="ov-btn" id="edTabEnh" type="button">ENHANCE</button>
     </div>
   </div>
 
@@ -2239,7 +2195,7 @@
   function getWorkerUrl() {
     if (!workerUrl) {
       // The edit functions are written once in this file and copied into the worker as source text.
-      const shared = [cropDims, warpQuad, toneLut, sharpenRGBA, applyAdjust, analyzeAuto, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
+      const shared = [cropDims, warpQuad, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
       const src = "const LIBHEIF_URL_W = '" + LIBHEIF_URL + "';\n" + shared + "\n" + WORKER_BODY;
       workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
     }
@@ -2322,7 +2278,7 @@
         id: i, op: 'convert', buffer,
         heic: fileObj.isHeic, mime: fileObj.type, outMime: OUTPUT_MIME,
         scaleMode, scale: currentScale, boxLong, boxShort, quality: currentQuality,
-        edit: convertEdit(fileObj)
+        edit: exportEdit(fileObj)
       },
       transfer: [buffer]
     };
@@ -2533,7 +2489,7 @@
     const opaque = true;             // JPEG has no alpha: flatten onto white
     let finalBlob = null;
 
-    const edit = convertEdit(fileObj);
+    const edit = exportEdit(fileObj);
     if (edit) {
       /* Cropped / perspective-corrected / annotated: render through the shared edit code. */
       let source, sw, sh;
@@ -2927,145 +2883,6 @@
     ctx.restore();
   }
 
-  /* ------------------------------------------------------------------ *
-   * Enhance. toneLut, sharpenRGBA, applyAdjust and analyzeAuto are copied into the
-   * Web Workers as source text, so they may only use their own arguments.
-   *
-   * adj = { ex, sh, hi, co, sp }, all in slider units:
-   *   ex exposure -100..100 (+-2 stops)   sh shadows -100..100 (+ lifts dark areas)
-   *   hi highlights -100..100 (- pulls glare down)   co contrast -100..100   sp sharpness 0..100
-   * ------------------------------------------------------------------ */
-  function toneLut(adj) {                              // brightness curve: luma 0..255 -> 0..255
-    const lut = new Float32Array(256);
-    const ex = (adj.ex || 0) / 100, sh = (adj.sh || 0) / 100, hi = (adj.hi || 0) / 100, co = (adj.co || 0) / 100;
-    const gain = Math.pow(2, ex * 2);
-    for (let i = 0; i < 256; i++) {
-      let y = i / 255;
-      if (ex) {                                        // exposure in linear light, with a soft shoulder so whites do not clip
-        let v = Math.pow(y, 2.2) * gain;
-        if (v > 0.8) v = 0.8 + 0.2 * Math.tanh((v - 0.8) / 0.2);
-        y = Math.pow(v, 1 / 2.2);
-      }
-      if (sh) {                                        // shadows: lift or deepen the dark end, ends stay put
-        const g = 1 - (sh > 0 ? 0.6 : 0.8) * sh;
-        y = y + (Math.pow(y, g) - y) * Math.pow(1 - y, 0.7);
-      }
-      if (hi) {                                        // highlights: negative pulls bright areas down
-        y = hi < 0 ? y + hi * 0.3 * y * y * y : y + hi * 0.5 * y * y * (1 - y);
-      }
-      if (co) {                                        // contrast: blend with a smooth S-curve
-        const sc = y * y * (3 - 2 * y);
-        y = y + co * (sc - y);
-      }
-      lut[i] = Math.min(1, Math.max(0, y)) * 255;
-      if (i && lut[i] < lut[i - 1]) lut[i] = lut[i - 1];   // never let the curve fold back
-    }
-    return lut;
-  }
-
-  /* Unsharp mask on brightness only (no colour fringes). The radius follows the picture size,
-     so the preview and the full-size result look alike. */
-  function sharpenRGBA(img, amount) {
-    const d = img.data, w = img.width, h = img.height, n = w * h;
-    const r = Math.max(1, Math.round(Math.min(w, h) / 700)), win = 2 * r + 1;
-    const Y = new Float32Array(n), T = new Float32Array(n), B = new Float32Array(n);
-    for (let p = 0, i = 0; p < n; p++, i += 4) Y[p] = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    for (let y = 0; y < h; y++) {
-      const row = y * w;
-      let sum = 0;
-      for (let x = -r; x <= r; x++) sum += Y[row + Math.min(w - 1, Math.max(0, x))];
-      for (let x = 0; x < w; x++) {
-        T[row + x] = sum / win;
-        sum += Y[row + Math.min(w - 1, x + r + 1)] - Y[row + Math.max(0, x - r)];
-      }
-    }
-    for (let x = 0; x < w; x++) {
-      let sum = 0;
-      for (let y = -r; y <= r; y++) sum += T[Math.min(h - 1, Math.max(0, y)) * w + x];
-      for (let y = 0; y < h; y++) {
-        B[y * w + x] = sum / win;
-        sum += T[Math.min(h - 1, y + r + 1) * w + x] - T[Math.max(0, y - r) * w + x];
-      }
-    }
-    const k = amount * 1.6, th = 1.5;                  // th: ignore tiny differences so noise is not boosted
-    for (let p = 0, i = 0; p < n; p++, i += 4) {
-      let dl = Y[p] - B[p];
-      if (dl > th) dl -= th; else if (dl < -th) dl += th; else continue;
-      dl *= k;
-      d[i] += dl; d[i + 1] += dl; d[i + 2] += dl;      // Uint8ClampedArray clamps for us
-    }
-  }
-
-  function applyAdjust(img, adj) {
-    if (!adj) return;
-    const d = img.data, n = img.width * img.height;
-    if (adj.ex || adj.sh || adj.hi || adj.co) {
-      const lut = toneLut(adj);
-      for (let p = 0, i = 0; p < n; p++, i += 4) {
-        const r = d[i], g = d[i + 1], b = d[i + 2];
-        const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        let gain = (lut[Math.min(255, Math.round(y))] + 1) / (y + 1);   // scale all channels together: hue stays
-        if (gain > 12) gain = 12;
-        const mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
-        if (mx * gain > 255) gain = 255 / mx;                            // keep hue instead of clipping one channel
-        d[i] = r * gain; d[i + 1] = g * gain; d[i + 2] = b * gain;
-      }
-    }
-    if (adj.sp > 0) sharpenRGBA(img, adj.sp / 100);
-  }
-
-  /* Looks at the brightness histogram and picks slider values. Deliberately conservative:
-     it only acts on what is clearly wrong, and the person can still adjust every slider. */
-  function analyzeAuto(img) {
-    const d = img.data, n = img.width * img.height;
-    const stride = Math.max(1, Math.floor(n / 200000));
-    const hist = new Uint32Array(256);
-    let total = 0;
-    for (let p = 0; p < n; p += stride) {
-      const i = p * 4;
-      hist[Math.min(255, Math.round(0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]))]++;
-      total++;
-    }
-    const pct = function (h, q) { let c = 0; for (let i = 0; i < 256; i++) { c += h[i]; if (c >= q * total) return i; } return 255; };
-    const frac = function (h, from, to) { let c = 0; for (let i = from; i <= to; i++) c += h[i]; return c / total; };
-    const remap = function (a) {
-      const lut = toneLut(a), h2 = new Uint32Array(256);
-      for (let i = 0; i < 256; i++) h2[Math.min(255, Math.max(0, Math.round(lut[i])))] += hist[i];
-      return h2;
-    };
-    const adj = { ex: 0, sh: 0, hi: 0, co: 0, sp: 0 };
-
-    // 1. exposure: bring a dark picture up towards a comfortable middle
-    const med = Math.max(0.02, pct(hist, 0.5) / 255);
-    let ev = 0;
-    if (med < 0.40) ev = Math.min(1.8, 2.2 * Math.log(0.40 / med) / Math.LN2);   // never darkens: a white label is not "overexposed"
-    adj.ex = Math.round(ev * 0.85 / 2 * 100);
-
-    // 2. shadows: if a lot of the picture is still very dark after that, lift it
-    let h2 = remap(adj);
-    const dark = frac(h2, 0, 46);
-    if (dark > 0.30) adj.sh = Math.round(Math.min(100, (dark - 0.20) * 160));
-
-    // 3. highlights: a small blown-out patch (glare, reflection) gets pulled down.
-    //    A big bright area is probably a white label, so that is left alone.
-    h2 = remap(adj);
-    const clip = frac(h2, 247, 255);
-    if (clip > 0.005 && clip < 0.25) adj.hi = -Math.round(Math.min(45, clip * 500));
-
-    // 4. contrast: only if the picture uses a narrow part of the range
-    h2 = remap(adj);
-    let lo = 0, up = 255, c = 0;
-    for (let i = 0; i < 256; i++) { c += h2[i]; if (c >= 0.01 * total) { lo = i; break; } }
-    c = 0;
-    for (let i = 0; i < 256; i++) { c += h2[i]; if (c >= 0.99 * total) { up = i; break; } }
-    const spread = (up - lo) / 255;
-    if (spread < 0.80) adj.co = Math.round(Math.min(45, (0.85 - spread) * 120));
-
-    // 5. sharpness: gentle; less when a dark picture was brightened a lot (it would boost noise)
-    adj.sp = adj.ex > 60 ? 20 : 35;
-    return adj;
-  }
-
   /* Crops / corrects perspective, then draws annotations. Returns a canvas of size t. */
   function renderEdited(source, sw, sh, t, edit, makeCanvas) {
     const out = makeCanvas(t.w, t.h);
@@ -3096,11 +2913,6 @@
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(source, 0, 0, t.w, t.h);
     }
-    if (edit && edit.adj) {                          // brightness / contrast / sharpness, before anything is drawn on top
-      const px = ctx.getImageData(0, 0, t.w, t.h);
-      applyAdjust(px, edit.adj === 'auto' ? analyzeAuto(px) : edit.adj);
-      ctx.putImageData(px, 0, 0);
-    }
     if (edit && edit.annos && edit.annos.length) {
       // Loupes magnify the clean picture, so keep a copy from before anything is drawn on it.
       let snap = null;
@@ -3123,19 +2935,8 @@
   /* What gets sent to the converter: null when the photo has no edit. */
   function exportEdit(fileObj) {
     const e = fileObj.edit;
-    if (!e || (!e.quad && !(e.annos && e.annos.length) && !e.adj)) return null;
-    return { quad: e.quad || null, annos: e.annos || [], adj: e.adj || null };
-  }
-
-  /* For conversion only: with "Auto-enhance all photos" on, photos without their own
-     brightness settings get an automatic analysis at output size. */
-  const autoAllChk = document.getElementById('autoAll');
-  function convertEdit(fileObj) {
-    const e = exportEdit(fileObj);
-    if (!autoAllChk.checked) return e;
-    if (!e) return { quad: null, annos: [], adj: 'auto' };
-    if (!e.adj) e.adj = 'auto';
-    return e;
+    if (!e || (!e.quad && !(e.annos && e.annos.length))) return null;
+    return { quad: e.quad || null, annos: e.annos || [] };
   }
 
   /* Keeps the original thumbnail so Reset can bring it back. */
@@ -3471,7 +3272,6 @@
     token: 0, file: null, bmp: null, srcBmp: null, bw: 0, bh: 0, tab: 'crop',
     base: fullQuad(), angle: 0, rot: 0,          // rot: quarter turns clockwise (bmp is the turned copy of srcBmp)
     redo: [], redoKey: '', textIdx: -1,
-    adj: { ex: 0, sh: 0, hi: 0, co: 0, sp: 0 }, plainCanvas: null, plainData: null, plainKey: '', enhOut: null, showOrig: false, enhPending: false,
     annos: [], annoKey: '', sel: -1,
     tool: 'arrow', color: ED_COLORS[0], size: 1, loupeZoom: 2.5,
     baseCanvas: null, baseKey: '',
@@ -3570,7 +3370,7 @@
       ctx.fillText('Loading…', ED.cw / 2, ED.ch / 2);
       return;
     }
-    if (ED.tab === 'crop') edRenderCrop(ctx); else if (ED.tab === 'enh') edRenderEnh(ctx); else edRenderAnno(ctx);
+    if (ED.tab === 'crop') edRenderCrop(ctx); else edRenderAnno(ctx);
   }
 
   function edRenderCrop(ctx) {
@@ -3716,10 +3516,9 @@
 
   /* The cropped picture that annotations are drawn on (at most 1600 px). */
   function edBuildBase() {
-    const key = edQuadKey() + '|' + JSON.stringify(ED.adj);
+    const key = edQuadKey();
     if (ED.baseCanvas && ED.baseKey === key) return;
-    const adj = edAdjOrNull();
-    const edit = (edIsFull() && !adj) ? null : { quad: edIsFull() ? null : edQuad(), adj: adj };
+    const edit = edIsFull() ? null : { quad: edQuad() };
     const cd = cropDims(ED.bw, ED.bh, edit);
     const k = Math.min(1, 1600 / Math.max(cd.w, cd.h));
     const t = { w: Math.max(1, Math.round(cd.w * k)), h: Math.max(1, Math.round(cd.h * k)) };
@@ -4106,12 +3905,12 @@
     if (!ED.bmp) return;
     try { edCanvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     const p = edPoint(e);
-    if (ED.tab === 'crop') { edCropDown(p); edRender(); } else if (ED.tab === 'anno') edAnnoDown(p);   // render: shows the loupe at once
+    if (ED.tab === 'crop') { edCropDown(p); edRender(); } else edAnnoDown(p);   // render: shows the loupe at once
   });
   edCanvas.addEventListener('pointermove', (e) => {
     if (!ED.bmp) return;
     const p = edPoint(e);
-    if (ED.tab === 'crop') edCropMove(p); else if (ED.tab === 'anno') edAnnoMove(p);
+    if (ED.tab === 'crop') edCropMove(p); else edAnnoMove(p);
   });
   const edPointerEnd = () => {
     if (ED.tab === 'anno') edAnnoUp();
@@ -4304,7 +4103,6 @@
       edBuildBase();
     } else {
       edCommitText();
-      if (tab === 'enh') edBuildEnh();
     }
     ED.tab = tab;
     ED.drag = null;
@@ -4314,119 +4112,15 @@
   }
 
   function edSetTabUI() {
-    const t = ED.tab;
-    edToolsCrop.hidden = t !== 'crop';
-    edToolsAnno.hidden = t !== 'anno';
-    edToolsEnh.hidden = t !== 'enh';
-    edClearBtn.hidden = t !== 'anno';
-    edTabCrop.classList.toggle('active', t === 'crop');
-    edTabAnno.classList.toggle('active', t === 'anno');
-    edTabEnh.classList.toggle('active', t === 'enh');
+    const anno = ED.tab === 'anno';
+    edToolsCrop.hidden = anno;
+    edToolsAnno.hidden = !anno;
+    edClearBtn.hidden = !anno;
+    edTabCrop.classList.toggle('active', !anno);
+    edTabAnno.classList.toggle('active', anno);
     setTitle(edTitle, ED.file ? ED.file.name : 'Edit',
-      t === 'anno' ? 'Draw, or use Move to reposition'
-      : t === 'enh' ? 'Auto-enhance, then fine-tune'
-      : 'Corners fix perspective; edge dots crop without skew');
+      anno ? 'Draw, or use Move to reposition' : 'Corners fix perspective; edge dots crop without skew');
   }
-
-  /* ---- Enhance tab ---- */
-  const edToolsEnh = document.getElementById('edToolsEnh');
-  const edTabEnh = document.getElementById('edTabEnh');
-  const ADJ_DEFS = [['ex', 'Exposure', -100, 100], ['sh', 'Shadows', -100, 100], ['hi', 'Highlights', -100, 100],
-                    ['co', 'Contrast', -100, 100], ['sp', 'Sharpness', 0, 100]];
-  const zeroAdj = () => ({ ex: 0, sh: 0, hi: 0, co: 0, sp: 0 });
-  const edAdjOrNull = () => ADJ_DEFS.some(d => ED.adj[d[0]]) ? Object.assign({}, ED.adj) : null;
-
-  function edSyncAdjUI() {
-    ADJ_DEFS.forEach(d => {
-      const row = document.getElementById('edAdj_' + d[0]);
-      row.input.value = String(ED.adj[d[0]]);
-      row.val.textContent = (ED.adj[d[0]] > 0 && d[2] < 0 ? '+' : '') + ED.adj[d[0]];
-    });
-  }
-
-  (function buildAdjRows() {
-    const box = document.getElementById('edAdjRows');
-    ADJ_DEFS.forEach(d => {
-      const row = document.createElement('div');
-      row.className = 'enh-row';
-      const lbl = document.createElement('span'); lbl.className = 'enh-lbl'; lbl.textContent = d[1];
-      const input = document.createElement('input');
-      input.type = 'range'; input.min = String(d[2]); input.max = String(d[3]); input.step = '1'; input.value = '0';
-      input.setAttribute('aria-label', d[1]);
-      const val = document.createElement('span'); val.className = 'enh-val'; val.textContent = '0';
-      row.id = 'edAdj_' + d[0]; row.input = input; row.val = val;
-      input.addEventListener('input', () => {
-        ED.adj[d[0]] = parseInt(input.value, 10) || 0;
-        val.textContent = (ED.adj[d[0]] > 0 && d[2] < 0 ? '+' : '') + ED.adj[d[0]];
-        edEnhSoon();
-      });
-      row.addEventListener('dblclick', () => { ED.adj[d[0]] = 0; edSyncAdjUI(); edEnhSoon(); });   // double-tap a slider to zero it
-      row.append(lbl, input, val);
-      box.appendChild(row);
-    });
-  })();
-
-  /* A small copy of the cropped photo (without adjustments) that the sliders work on. */
-  function edBuildEnh() {
-    const key = edQuadKey();
-    if (!ED.plainCanvas || ED.plainKey !== key) {
-      const edit = edIsFull() ? null : { quad: edQuad() };
-      const cd = cropDims(ED.bw, ED.bh, edit);
-      const k = Math.min(1, 900 / Math.max(cd.w, cd.h));
-      const t = { w: Math.max(1, Math.round(cd.w * k)), h: Math.max(1, Math.round(cd.h * k)) };
-      ED.plainCanvas = renderEdited(ED.bmp, ED.bw, ED.bh, t, edit, makeMainCanvas);
-      ED.plainData = ED.plainCanvas.getContext('2d').getImageData(0, 0, t.w, t.h);
-      ED.enhOut = makeMainCanvas(t.w, t.h);
-      ED.plainKey = key;
-    }
-    edEnhRefresh();
-  }
-
-  function edEnhRefresh() {
-    if (!ED.plainData) return;
-    const src = ED.plainData;
-    const px = new ImageData(new Uint8ClampedArray(src.data), src.width, src.height);
-    applyAdjust(px, edAdjOrNull());
-    ED.enhOut.getContext('2d').putImageData(px, 0, 0);
-    edRender();
-  }
-
-  function edEnhSoon() {                              // one refresh per frame while a slider is dragged
-    if (ED.enhPending) return;
-    ED.enhPending = true;
-    requestAnimationFrame(() => { ED.enhPending = false; edEnhRefresh(); });
-  }
-
-  function edRenderEnh(ctx) {
-    const c = ED.showOrig ? ED.plainCanvas : ED.enhOut;
-    if (!c) return;
-    const r = ED.rect = edFit(c.width, c.height, 8);
-    ctx.drawImage(c, r.x, r.y, r.w, r.h);
-  }
-
-  document.getElementById('edAuto').addEventListener('click', () => {
-    if (!ED.plainData) return;
-    ED.adj = Object.assign(zeroAdj(), analyzeAuto(ED.plainData));
-    edSyncAdjUI();
-    edEnhRefresh();
-  });
-
-  document.getElementById('edAdjReset').addEventListener('click', () => {
-    if (!edAdjOrNull()) return;
-    if (!confirm('Reset all brightness and sharpness settings?')) return;
-    ED.adj = zeroAdj();
-    edSyncAdjUI();
-    edEnhRefresh();
-  });
-
-  (function wireCompare() {                           // hold to see the original, release to see the result
-    const b = document.getElementById('edCompare');
-    const set = (on) => { if (ED.showOrig !== on) { ED.showOrig = on; edRender(); } };
-    b.addEventListener('pointerdown', () => set(true));
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => set(false)));
-  })();
-
-  edTabEnh.addEventListener('click', () => edSwitchTab('enh'));
 
   edTabCrop.addEventListener('click', () => edSwitchTab('crop'));
   edTabAnno.addEventListener('click', () => edSwitchTab('anno'));
@@ -4475,9 +4169,6 @@
     ED.annoKey = (e && e.annoKey) || '';
     ED.baseCanvas = null;
     ED.baseKey = '';
-    ED.adj = (e && e.adj && typeof e.adj === 'object') ? Object.assign(zeroAdj(), e.adj) : zeroAdj();
-    ED.plainCanvas = null; ED.plainData = null; ED.plainKey = ''; ED.enhOut = null; ED.showOrig = false;
-    edSyncAdjUI();
     edCommitText();
     edSyncButtons();
     edRender();
@@ -4492,7 +4183,6 @@
     ED.bmp = null;
     ED.srcBmp = null;
     ED.baseCanvas = null;
-    ED.plainCanvas = null; ED.plainData = null; ED.enhOut = null;
     const f = ED.file;
     ED.file = null;
     if (applied && f) {
@@ -4508,13 +4198,11 @@
     if (!ED.bmp || !ED.file) return;
     if (!edAnnosConsistent()) return;
     const quad = (edIsFull() && !ED.rot) ? null : edQuad().map(p => edToSrc(p, ED.rot));
-    const adj = edAdjOrNull();
-    if (!quad && !ED.annos.length && !adj) {
+    if (!quad && !ED.annos.length) {
       ED.file.edit = null;
     } else {
       ED.file.edit = {
         quad: quad,
-        adj: adj,
         ui: { base: ED.base.map(p => ({ x: p.x, y: p.y })), angle: ED.angle, rot: ED.rot },
         annos: ED.annos.map(a => Object.assign({}, a)),
         annoKey: ED.annos.length ? ED.annoKey : ''
@@ -4622,7 +4310,6 @@
     finally { fileInput.value = ''; }         // lets the same file be picked again
   });
 
-  autoAllChk.addEventListener('change', () => { store('qs_auto', autoAllChk.checked ? '1' : '0'); invalidateProcessedCache(); });
   sizeSelect.addEventListener('change', applySizeChoice);
   qualitySelect.addEventListener('change', applyQualityChoice);
 
@@ -4690,12 +4377,11 @@
     const savedChunk = parseInt(read('qs_share_chunk'), 10);
     if (isFinite(savedChunk) && savedChunk > 0) shareChunkSize = savedChunk;
 
-    autoAllChk.checked = read('qs_auto') === '1';
     loadNaming();
     resetApp();
 
     if (isFinePointer) {
-      dropZoneText.textContent = 'Click or drop images here';
+      dropZoneText.textContent = 'Select or drop images here';
       emptyState.innerHTML = 'NO IMAGES YET';
     } else {
       emptyState.textContent = 'No images selected yet';
