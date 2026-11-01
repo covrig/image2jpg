@@ -806,7 +806,18 @@
     #edToolsAnno .ov-btn { padding: 8px 10px; font-size: 13px; }
     #edZoomVal { flex: 0 0 44px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     #edAngleVal { flex: 0 0 52px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    #edTextRow input[type="text"] { flex: 1 1 auto; min-width: 0; }
+    #edTextRow input[type="text"] { flex: 1 1 auto; min-width: 0; text-align: center; }
+
+    /* Clear sits centred in a strip just above the picture, away from the tool buttons, so it is hard to hit by accident. */
+    .ed-clear-float {
+      position: absolute;
+      top: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      padding: 6px 14px;
+      font-size: 12px;
+    }
 
     .ed-swatch {
       width: 30px;
@@ -935,12 +946,12 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.4.2</h1>
+      <h1>IMAGE2JPG 1.5.0</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
       <button class="btn-icon" id="themeBtn" title="Theme: follow system">◐</button>
-      <button class="btn-icon" id="settingsBtn" title="File naming settings">⚙</button>
+      <button class="btn-icon" id="settingsBtn" title="Settings">⚙</button>
       <button class="btn-refresh" id="refreshBtn" title="Start over">
         <span>↺</span> RESET
       </button>
@@ -1031,9 +1042,9 @@
 
   <div class="sheet" id="settingsSheet" hidden>
     <div class="sheet-backdrop" id="sheetBackdrop"></div>
-    <div class="sheet-panel" role="dialog" aria-modal="true" aria-label="File naming settings">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Settings">
       <div class="sheet-header">
-        <h2>File naming</h2>
+        <h2>Settings</h2>
         <button class="btn-icon" id="sheetCloseBtn" title="Close">✕</button>
       </div>
 
@@ -1081,34 +1092,18 @@
 
       <div class="setting-row">
         <div>
-          <div class="setting-label">Add a number</div>
-          <div class="setting-desc">Counts up through the batch</div>
-        </div>
-        <input type="checkbox" id="setUseIndex" checked>
-      </div>
-
-      <div class="setting-row">
-        <div>
-          <div class="setting-label">Start at</div>
-          <div class="setting-desc">First number in the sequence</div>
-        </div>
-        <div class="setting-control narrow"><input type="number" id="setStart" inputmode="numeric" min="0" max="99999" value="1"></div>
-      </div>
-
-      <div class="setting-row">
-        <div>
-          <div class="setting-label">Digits</div>
-          <div class="setting-desc">01 uses two digits, 001 uses three</div>
-        </div>
-        <div class="setting-control narrow"><input type="number" id="setDigits" inputmode="numeric" min="1" max="6" value="2"></div>
-      </div>
-
-      <div class="setting-row">
-        <div>
           <div class="setting-label">Separator</div>
-          <div class="setting-desc">Sits between each part</div>
+          <div class="setting-desc">Sits between each part. Batches of 2 or more get a number (1, 2, 3 …) at the end</div>
         </div>
         <div class="setting-control narrow"><input type="text" id="setSep" maxlength="3" value="_"></div>
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Remove EXIF data</div>
+          <div class="setting-desc">Strips location, date and camera info. Untick to keep it (JPEG sources only; HEIC always loses it)</div>
+        </div>
+        <input type="checkbox" id="setStripExif" checked>
       </div>
 
       <div class="sheet-footer">
@@ -1143,6 +1138,7 @@
 
     <div class="ed-stage" id="edStage">
       <canvas id="edCanvas"></canvas>
+      <button class="ov-btn ed-clear-float" id="edClear" type="button" hidden>Clear all</button>
     </div>
 
     <div class="ed-tools" id="edToolsCrop">
@@ -1152,6 +1148,7 @@
         <span id="edAngleVal">0.0°</span>
       </div>
       <div class="ed-row">
+        <button class="ov-btn" id="edRotate" type="button">⟳ Rotate 90°</button>
         <button class="ov-btn" id="edFull" type="button">Reset C/S</button>
         <button class="ov-btn" id="edResetAll" type="button">Reset C/S/An</button>
       </div>
@@ -1167,11 +1164,11 @@
       </div>
       <div class="ed-row" id="edColors"></div>
       <div class="ed-row">
+        <button class="ov-btn" id="edDelete" type="button" disabled>Delete</button>
+        <button class="ov-btn" id="edUndo" type="button">↶ Undo</button>
+        <button class="ov-btn" id="edRedo" type="button" disabled>↷ Redo</button>
 		<button class="ov-btn" id="edToolMove" type="button" data-tool="move">✥ Move</button>
         <button class="ov-btn" id="edSize" type="button">Size: M</button>
-        <button class="ov-btn" id="edUndo" type="button">↶ Undo</button>
-        <button class="ov-btn" id="edClear" type="button">Clear</button>
-        <button class="ov-btn" id="edDelete" type="button" disabled>🗑 Delete</button>
       </div>
       <div class="ed-row" id="edZoomRow" hidden>
         <span class="ed-lbl">Loupe zoom</span>
@@ -1179,8 +1176,7 @@
         <span id="edZoomVal">2.5×</span>
       </div>
       <div class="ed-row" id="edTextRow" hidden>
-        <input type="text" id="edTextInput" placeholder="Type, then tap Add" maxlength="60">
-        <button class="ov-btn primary" id="edTextAdd" type="button">Add</button>
+        <input type="text" id="edTextInput" placeholder="Type text, tap the picture to place it" maxlength="60">
       </div>
     </div>
 
@@ -1217,9 +1213,7 @@
     keepName: false,
     useDate: false,
     useQuality: false,
-    useIndex: true,
-    start: 1,
-    digits: 2,
+    stripExif: true,
     sep: '_'
   };
   let naming = Object.assign({}, DEFAULT_NAMING);
@@ -1415,6 +1409,8 @@
     if (raw) {
       try { naming = Object.assign({}, DEFAULT_NAMING, JSON.parse(raw)); }
       catch (e) { naming = Object.assign({}, DEFAULT_NAMING); }
+      // Settings saved by older versions: the number options no longer exist.
+      delete naming.useIndex; delete naming.start; delete naming.digits;
     }
     writeNamingToForm();
   }
@@ -1425,25 +1421,19 @@
     document.getElementById('setKeepName').checked = naming.keepName;
     document.getElementById('setUseDate').checked = naming.useDate;
     document.getElementById('setUseQuality').checked = naming.useQuality;
-    document.getElementById('setUseIndex').checked = naming.useIndex;
-    document.getElementById('setStart').value = naming.start;
-    document.getElementById('setDigits').value = naming.digits;
+    document.getElementById('setStripExif').checked = naming.stripExif;
     document.getElementById('setSep').value = naming.sep;
     updateNamePreview();
   }
 
   function readNamingFromForm() {
-    const digits = parseInt(document.getElementById('setDigits').value, 10);
-    const start = parseInt(document.getElementById('setStart').value, 10);
     naming = {
       prefix: document.getElementById('setPrefix').value.trim(),
       suffix: document.getElementById('setSuffix').value.trim(),
       keepName: document.getElementById('setKeepName').checked,
       useDate: document.getElementById('setUseDate').checked,
       useQuality: document.getElementById('setUseQuality').checked,
-      useIndex: document.getElementById('setUseIndex').checked,
-      start: isFinite(start) && start >= 0 ? start : 1,
-      digits: isFinite(digits) ? Math.min(6, Math.max(1, digits)) : 2,
+      stripExif: document.getElementById('setStripExif').checked,
       sep: document.getElementById('setSep').value || '_'
     };
     store('qs_naming', naming);
@@ -1465,15 +1455,18 @@
     return `q${Math.round(currentQuality * 100)}`;
   }
 
-  function buildFileName(baseName, lastModified, position, ext) {
+  /* A batch of 2 or more always gets a number, counting up from 1. The digit count follows the
+     size of the batch (9 -> 1 digit, 22 -> 2 digits, 111 -> 3 digits). A single image gets none. */
+  function buildFileName(baseName, lastModified, position, ext, total) {
+    if (total === undefined) total = selectedFiles.length;
     const parts = [];
     if (naming.prefix) parts.push(sanitizeNamePart(naming.prefix));
     if (naming.keepName) parts.push(sanitizeNamePart(baseName));
     if (naming.useDate) parts.push(dateStamp(lastModified));
     if (naming.suffix) parts.push(sanitizeNamePart(naming.suffix));
     if (naming.useQuality) parts.push(qualityTag());
-    if (naming.useIndex) {
-      parts.push(String(naming.start + position).padStart(naming.digits, '0'));
+    if (total > 1) {
+      parts.push(String(position + 1).padStart(String(total).length, '0'));
     }
     const sep = sanitizeNamePart(naming.sep) || '_';
     let stem = parts.filter(Boolean).join(sep);
@@ -1494,12 +1487,99 @@
   }
 
   function updateNamePreview() {
-    const sample = selectedFiles[0];
-    const base = sample ? stripExt(sample.name) : 'photo';
-    const when = sample ? sample.file.lastModified : Date.now();
-    const first = buildFileName(base, when, 0, 'jpg');
-    const second = buildFileName(sample ? base : 'sunset', when, 1, 'jpg');
-    namePreview.innerHTML = `${first}<br>${second}`;
+    const n = selectedFiles.length;
+    const a = selectedFiles[0], b = selectedFiles[1] || a;
+    const baseA = a ? stripExt(a.name) : 'photo';
+    const baseB = b ? stripExt(b.name) : 'sunset';
+    const whenA = a ? a.file.lastModified : Date.now();
+    const whenB = b ? b.file.lastModified : Date.now();
+    const total = Math.max(n, 2);                      // with no photos yet, show a batch of two
+    const first = buildFileName(baseA, whenA, 0, 'jpg', n === 1 ? 1 : total);
+    namePreview.innerHTML = n === 1
+      ? first
+      : `${first}<br>${buildFileName(baseB, whenB, 1, 'jpg', total)}`;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * EXIF: canvas re-encoding drops it. When the person unticks "Remove EXIF data",
+   * the original JPEG's EXIF block is copied into the output, with the rotation tag
+   * reset (the pixels are already upright) and the embedded thumbnail blanked
+   * (it would still show an uncropped picture).
+   * ------------------------------------------------------------------ */
+  async function readJpegExifSegment(blob) {
+    const head = new Uint8Array(await blob.slice(0, 262144).arrayBuffer());
+    if (head[0] !== 0xFF || head[1] !== 0xD8) return null;
+    let o = 2;
+    while (o + 4 <= head.length) {
+      if (head[o] !== 0xFF) break;
+      const m = head[o + 1];
+      if (m === 0xFF) { o++; continue; }
+      if (m === 0xD9 || m === 0xDA) break;
+      if (m === 0x01 || (m >= 0xD0 && m <= 0xD7)) { o += 2; continue; }
+      const len = (head[o + 2] << 8) | head[o + 3];
+      if (len < 2) break;
+      if (m === 0xE1 && o + 2 + len <= head.length &&
+          head[o + 4] === 0x45 && head[o + 5] === 0x78 && head[o + 6] === 0x69 &&
+          head[o + 7] === 0x66 && head[o + 8] === 0 && head[o + 9] === 0) {
+        return head.slice(o, o + 2 + len);
+      }
+      o += 2 + len;
+    }
+    return null;
+  }
+
+  function sanitizeExifSegment(seg) {
+    const T = 10;                                       // TIFF header starts after FFE1 + length + "Exif\0\0"
+    const end = seg.length;
+    if (end < T + 8) return null;
+    const le = seg[T] === 0x49 && seg[T + 1] === 0x49;
+    const be = seg[T] === 0x4D && seg[T + 1] === 0x4D;
+    if (!le && !be) return null;
+    const dv = new DataView(seg.buffer, seg.byteOffset, seg.byteLength);
+    const r16 = (p) => dv.getUint16(p, le), r32 = (p) => dv.getUint32(p, le);
+    const ifd0 = T + r32(T + 4);
+    if (ifd0 + 2 > end) return null;
+    const n0 = r16(ifd0);
+    if (ifd0 + 2 + n0 * 12 + 4 > end) return null;
+    for (let i = 0; i < n0; i++) {
+      const e = ifd0 + 2 + i * 12;
+      if (r16(e) === 0x0112) dv.setUint16(e + 8, 1, le);   // Orientation -> upright
+    }
+    const nextPos = ifd0 + 2 + n0 * 12;
+    const ifd1Off = r32(nextPos);
+    if (ifd1Off) {
+      const ifd1 = T + ifd1Off;
+      if (ifd1 + 2 <= end) {
+        const n1 = r16(ifd1);
+        if (ifd1 + 2 + n1 * 12 <= end) {
+          let off = 0, len = 0;
+          for (let i = 0; i < n1; i++) {
+            const e = ifd1 + 2 + i * 12, tag = r16(e);
+            if (tag === 0x0201) off = r32(e + 8); else if (tag === 0x0202) len = r32(e + 8);
+          }
+          if (off && len && T + off + len <= end) seg.fill(0, T + off, T + off + len);
+        }
+      }
+      dv.setUint32(nextPos, 0, le);                     // no second IFD any more
+    }
+    return seg;
+  }
+
+  async function applyExifPolicy(blob, fileObj) {
+    if (naming.stripExif || !fileObj || fileObj.kind !== 'jpeg') return blob;
+    try {
+      const raw = await readJpegExifSegment(fileObj.src);
+      const seg = raw && sanitizeExifSegment(raw);
+      if (!seg) return blob;
+      const out = new Uint8Array(await blob.arrayBuffer());
+      if (out[0] !== 0xFF || out[1] !== 0xD8) return blob;
+      let at = 2;
+      if (out[2] === 0xFF && out[3] === 0xE0) at = 4 + ((out[4] << 8) | out[5]);   // keep the JFIF header first
+      return new Blob([out.subarray(0, at), seg, out.subarray(at)], { type: blob.type || OUTPUT_MIME });
+    } catch (err) {
+      console.warn('Could not keep EXIF for', fileObj.name, err);
+      return blob;
+    }
   }
 
   function stripExt(name) {
@@ -2361,7 +2441,8 @@
             buildFileName(stripExt(selectedFiles[i].name), selectedFiles[i].file.lastModified, i, extFromMime(mime)),
             usedNames
           );
-          outFile = new File([r.blob], name, { type: mime });
+          const outBlob = await applyExifPolicy(r.blob, selectedFiles[i]);
+          outFile = new File([outBlob], name, { type: mime });
         }
         processedFilesCache.push(outFile);
         /* Badge turns accent blue and reports the format it really came out as:
@@ -2463,6 +2544,7 @@
     }
 
     if (!finalBlob) throw new Error('The browser could not encode this image.');
+    finalBlob = await applyExifPolicy(finalBlob, fileObj);
 
     const ext = extFromMime(targetMime);
     const name = makeUnique(
@@ -3184,14 +3266,15 @@
   const edTabAnno = document.getElementById('edTabAnno');
   const edSizeBtn = document.getElementById('edSize');
 
-  const ED_COLORS = ['#ff3b30', '#ffcc00', '#00ff00', '#0a84ff', '#ffffff', '#000000'];
+  const ED_COLORS = ['#ff3b30', '#ffcc00', '#00ff00', '#0a84ff', '#bf5af2', '#ffffff', '#000000'];
   const ED_SIZE_NAMES = ['S', 'M', 'L', 'XL', 'XXL'];
   const fullQuad = () => [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
   const clamp01 = (n) => Math.min(1, Math.max(0, n));
 
   const ED = {
-    token: 0, file: null, bmp: null, bw: 0, bh: 0, tab: 'crop',
-    base: fullQuad(), angle: 0,
+    token: 0, file: null, bmp: null, srcBmp: null, bw: 0, bh: 0, tab: 'crop',
+    base: fullQuad(), angle: 0, rot: 0,          // rot: quarter turns clockwise (bmp is the turned copy of srcBmp)
+    redo: [], redoKey: '', textIdx: -1,
     annos: [], annoKey: '', sel: -1,
     tool: 'arrow', color: ED_COLORS[0], size: 1, loupeZoom: 2.5,
     baseCanvas: null, baseKey: '',
@@ -3216,7 +3299,29 @@
   }
 
   function edQuadKey() {
-    return edIsFull() ? 'full' : edQuad().map(p => p.x.toFixed(4) + ',' + p.y.toFixed(4)).join(';');
+    return ED.rot + '|' + (edIsFull() ? 'full' : edQuad().map(p => p.x.toFixed(4) + ',' + p.y.toFixed(4)).join(';'));
+  }
+
+  /* Rotation: the editor works on a turned copy of the photo (ED.bmp). The saved crop is mapped
+     back to the original photo's frame, with the same corner order, so the converter turns it too. */
+  function edToSrc(p, turns) {
+    for (let i = 0; i < turns; i++) p = { x: p.y, y: 1 - p.x };
+    return p;
+  }
+
+  function edApplyRot() {
+    if (ED.bmp && ED.bmp !== ED.srcBmp) { ED.bmp.width = 0; ED.bmp.height = 0; }
+    const s = ED.srcBmp, k = ED.rot % 4;
+    if (!k) { ED.bmp = s; ED.bw = s.width; ED.bh = s.height; return; }
+    const odd = k % 2 === 1;
+    const c = makeMainCanvas(odd ? s.height : s.width, odd ? s.width : s.height);
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.translate(c.width / 2, c.height / 2);
+    ctx.rotate(k * Math.PI / 2);
+    ctx.drawImage(s, -s.width / 2, -s.height / 2);
+    ED.bmp = c; ED.bw = c.width; ED.bh = c.height;
   }
 
   /* Rejects shapes that fold over themselves or collapse. */
@@ -3247,11 +3352,12 @@
     edCanvas.height = Math.round(ED.ch * ED.dpr);
   }
 
-  function edFit(iw, ih, margin) {
-    const aw = Math.max(10, ED.cw - 2 * margin), ah = Math.max(10, ED.ch - 2 * margin);
+  function edFit(iw, ih, margin, top) {
+    top = top || 0;                                  // free strip above the picture (holds the Clear all button)
+    const aw = Math.max(10, ED.cw - 2 * margin), ah = Math.max(10, ED.ch - 2 * margin - top);
     const s = Math.min(aw / iw, ah / ih);
     const w = iw * s, h = ih * s;
-    return { x: (ED.cw - w) / 2, y: (ED.ch - h) / 2, w: w, h: h };
+    return { x: (ED.cw - w) / 2, y: margin + top + (ah - h) / 2, w: w, h: h };
   }
 
   function edRender() {
@@ -3387,7 +3493,7 @@
   function edRenderAnno(ctx) {
     const c = ED.baseCanvas;
     if (!c) return;
-    const r = ED.rect = edFit(c.width, c.height, 8);
+    const r = ED.rect = edFit(c.width, c.height, 8, 40);
     ctx.drawImage(c, r.x, r.y, r.w, r.h);
     const list = ED.temp ? ED.annos.concat([ED.temp]) : ED.annos;
     ctx.save();
@@ -3398,7 +3504,7 @@
     drawAnnotations(ctx, r.w, r.h, list, c);
     ctx.restore();
     if (ED.sel >= 0 && ED.annos[ED.sel]) edDrawSelection(ctx, ED.annos[ED.sel]);
-    if (ED.textPos) {                              // small cross where the text will go
+    if (ED.textPos && ED.textIdx < 0) {              // small cross where the text will go
       const x = r.x + ED.textPos.x * r.w, y = r.y + ED.textPos.y * r.h;
       ctx.save();
       ctx.strokeStyle = '#3880ff';
@@ -3533,23 +3639,67 @@
     return { x: clamp01((p.x - r.x) / r.w), y: clamp01((p.y - r.y) / r.h) };
   }
 
-  function edUpdateTextTemp() {
+  /* Text is added straight away: typing creates (or edits) a text annotation on the picture,
+     tapping the picture places it, and the Move tool repositions it later. */
+  function edCommitText() {
+    ED.textIdx = -1;
+    ED.textPos = null;                               // the text box itself keeps its content
+  }
+
+  function edLiveText() {
     const text = edTextInput.value.trim();
-    ED.temp = (ED.textPos && text)
-      ? { t: 'text', x: ED.textPos.x, y: ED.textPos.y, text: text, c: ED.color, s: ED.size }
-      : null;
+    if (ED.textIdx >= 0 && !ED.annos[ED.textIdx]) ED.textIdx = -1;
+    if (ED.textIdx >= 0) {
+      if (!text) {
+        ED.annos.splice(ED.textIdx, 1);
+        ED.textIdx = -1;
+        if (!ED.annos.length) ED.annoKey = '';
+      } else {
+        ED.annos[ED.textIdx].text = text;
+      }
+    } else if (text) {
+      const pos = ED.textPos || { x: 0.5, y: 0.5 };
+      if (!ED.annos.length) ED.annoKey = edQuadKey();
+      ED.annos.push({ t: 'text', x: pos.x, y: pos.y, text: text, c: ED.color, s: ED.size });
+      ED.textIdx = ED.annos.length - 1;
+      ED.redo = [];
+    }
+    edSyncButtons();
+    edRender();
+  }
+
+  function edPlaceText(n) {
+    ED.textPos = n;
+    const a = ED.annos[ED.textIdx];
+    if (a) { a.x = n.x; a.y = n.y; }
+    edRender();
   }
 
   const edZoomRow = document.getElementById('edZoomRow');
   const edZoomInput = document.getElementById('edZoom');
   const edZoomVal = document.getElementById('edZoomVal');
   const edDeleteBtn = document.getElementById('edDelete');
+  const edUndoBtn = document.getElementById('edUndo');
+  const edRedoBtn = document.getElementById('edRedo');
+  const edClearBtn = document.getElementById('edClear');
   const ANNO_FS = [0.035, 0.055, 0.085, 0.115, 0.15];     // text sizes: keep in sync with drawAnnotations
 
   /* Shows or hides the controls that depend on the selection and the active tool. */
+  function edSyncButtons() {
+    edUndoBtn.disabled = !ED.annos.length;
+    edRedoBtn.disabled = !ED.redo.length;
+  }
+
   function edSyncUI() {
+    edSyncButtons();
     const a = ED.annos[ED.sel];
     const selLoupe = !!a && a.t === 'loupe';
+    if (a && a.c) {
+      ED.color = a.c;
+      if (a.s >= 0 && a.s < ED_SIZE_NAMES.length) ED.size = a.s;
+      edColorsRow.querySelectorAll('.ed-swatch').forEach((sw, i) => sw.classList.toggle('active', ED_COLORS[i] === ED.color));
+      edSizeBtn.textContent = 'Size: ' + ED_SIZE_NAMES[ED.size];
+    }
     edDeleteBtn.disabled = !a;
     edZoomRow.hidden = !(ED.tool === 'loupe' || selLoupe);
     const z = selLoupe ? (a.z > 1 ? a.z : 2.5) : ED.loupeZoom;
@@ -3692,10 +3842,12 @@
     ED.sel = -1;
     edSyncUI();
     if (ED.tool === 'text') {
-      ED.textPos = n;
-      edUpdateTextTemp();
-      edRender();
-      edTextInput.focus();
+      ED.drag = { mode: 'textPlace' };
+      edPlaceText(n);
+      if (ED.textIdx < 0) {
+        if (edTextInput.value.trim()) edLiveText();   // the remembered text goes where you tapped
+        else edTextInput.focus();
+      }
       return;
     }
     ED.drag = { mode: 'draw' };
@@ -3714,6 +3866,7 @@
       edRender();
       return;
     }
+    if (d.mode === 'textPlace') { edPlaceText(edAnnoPoint(p)); return; }
     const r = ED.rect;
     let dx = (p.x - d.start.x) / r.w, dy = (p.y - d.start.y) / r.h;
     const o = d.orig;
@@ -3743,7 +3896,9 @@
     if (Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h) > 10) {
       if (!ED.annos.length) ED.annoKey = edQuadKey();
       ED.annos.push(a);
-      if (a.t === 'loupe') ED.sel = ED.annos.length - 1;   // so its zoom can be adjusted right away
+      ED.redo = [];
+      edSetTool('move');                           // the new shape stays selected: move, recolour or resize it
+      ED.sel = ED.annos.length - 1;                // until another one is added
       edSyncUI();
     }
     edRender();
@@ -3781,32 +3936,54 @@
     edAngleVal.textContent = v.toFixed(1) + '°';
   }
 
-  document.getElementById('edFull').addEventListener('click', () => {
+  function edResetCrop() {
     ED.base = fullQuad();
     edSetAngle(0);
+    if (ED.rot) { ED.rot = 0; edApplyRot(); }
+    ED.baseCanvas = null;
+    ED.baseKey = '';
+  }
+
+  document.getElementById('edRotate').addEventListener('click', () => {
+    if (!ED.srcBmp) return;
+    const map = (p) => ({ x: 1 - p.y, y: p.x });          // one quarter turn clockwise
+    const b = ED.base;
+    ED.base = [map(b[3]), map(b[0]), map(b[1]), map(b[2])];   // old corners move one place round
+    ED.rot = (ED.rot + 1) % 4;
+    edApplyRot();
+    ED.baseCanvas = null;
+    ED.baseKey = '';
+    edRender();
+  });
+
+  document.getElementById('edFull').addEventListener('click', () => {
+    if (!confirm('Reset the crop, straighten and rotation?')) return;
+    edResetCrop();
     edRender();
   });
 
   document.getElementById('edResetAll').addEventListener('click', () => {
-    if (ED.annos.length && !confirm('Remove the crop and all annotations?')) return;
-    ED.base = fullQuad();
-    edSetAngle(0);
+    if (!confirm('Reset the crop, straighten and rotation, and remove all annotations?')) return;
+    edResetCrop();
     ED.annos = [];
     ED.annoKey = '';
+    ED.redo = [];
     ED.sel = -1;
     ED.temp = null;
-    ED.textPos = null;
-    ED.baseCanvas = null;
+    edCommitText();
+    edSyncButtons();
     edRender();
   });
 
   /* Annotation tools */
   function edSetTool(tool) {
+    const live = ED.textIdx;                       // text being typed, if any
     ED.tool = tool;
     document.querySelectorAll('#edToolsAnno [data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
     edTextRow.hidden = tool !== 'text';
-    if (tool !== 'text') { ED.textPos = null; ED.temp = null; }
-    if (tool !== 'move' && tool !== 'loupe') ED.sel = -1;   // the selection only matters while moving / adjusting a loupe
+    if (tool !== 'text') { edCommitText(); ED.temp = null; }
+    if (tool === 'move' && live >= 0) ED.sel = live;        // finished text stays selected
+    else if (tool !== 'move' && tool !== 'loupe') ED.sel = -1;   // the selection only matters while moving / adjusting a loupe
     edSyncUI();
     edRender();
   }
@@ -3826,7 +4003,7 @@
       ED.color = color;
       if (ED.annos[ED.sel]) ED.annos[ED.sel].c = color;     // recolours the selected annotation too
       edColorsRow.querySelectorAll('.ed-swatch').forEach(s => s.classList.toggle('active', s === b));
-      edUpdateTextTemp();
+      if (ED.annos[ED.textIdx]) ED.annos[ED.textIdx].c = color;   // text being typed
       edRender();
     });
     edColorsRow.appendChild(b);
@@ -3836,25 +4013,39 @@
     ED.size = (ED.size + 1) % ED_SIZE_NAMES.length;
     edSizeBtn.textContent = 'Size: ' + ED_SIZE_NAMES[ED.size];
     if (ED.annos[ED.sel]) ED.annos[ED.sel].s = ED.size;      // resizes the selected annotation too
-    edUpdateTextTemp();
+    if (ED.annos[ED.textIdx]) ED.annos[ED.textIdx].s = ED.size;   // text being typed
     edRender();
   });
 
-  document.getElementById('edUndo').addEventListener('click', () => {
-    ED.annos.pop();
+  edUndoBtn.addEventListener('click', () => {
+    if (!ED.annos.length) return;
+    ED.redo.push(ED.annos.pop());
+    ED.redoKey = edQuadKey();
     if (!ED.annos.length) ED.annoKey = '';
+    if (ED.textIdx >= ED.annos.length) edCommitText();
     if (ED.sel >= ED.annos.length) ED.sel = -1;
     edSyncUI();
     edRender();
   });
 
-  document.getElementById('edClear').addEventListener('click', () => {
+  edRedoBtn.addEventListener('click', () => {
+    if (!ED.redo.length) return;
+    if (ED.redoKey !== edQuadKey()) { ED.redo = []; edSyncUI(); return; }   // the crop changed meanwhile
+    if (!ED.annos.length) ED.annoKey = edQuadKey();
+    ED.annos.push(ED.redo.pop());
+    edSyncUI();
+    edRender();
+  });
+
+  edClearBtn.addEventListener('click', () => {
+    if (!ED.annos.length) return;
+    if (!confirm('Remove all annotations?')) return;
     ED.annos = [];
     ED.annoKey = '';
+    ED.redo = [];
     ED.sel = -1;
     ED.temp = null;
-    ED.textPos = null;
-    edTextInput.value = '';
+    edCommitText();
     edSyncUI();
     edRender();
   });
@@ -3879,21 +4070,15 @@
     edRender();
   });
 
-  edTextInput.addEventListener('input', () => { edUpdateTextTemp(); edRender(); });
-  edTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); edAddText(); } });
-  document.getElementById('edTextAdd').addEventListener('click', edAddText);
-
-  function edAddText() {
-    const text = edTextInput.value.trim();
-    if (!text) { edTextInput.focus(); return; }
-    const pos = ED.textPos || { x: 0.5, y: 0.5 };
-    if (!ED.annos.length) ED.annoKey = edQuadKey();
-    ED.annos.push({ t: 'text', x: pos.x, y: pos.y, text: text, c: ED.color, s: ED.size });
-    edTextInput.value = '';
-    ED.textPos = null;
-    ED.temp = null;
-    edRender();
-  }
+  edTextInput.value = read('qs_last_text') || '';     // remembered between photos and visits
+  edTextInput.addEventListener('input', () => { store('qs_last_text', edTextInput.value); edLiveText(); });
+  edTextInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {                     // done typing: the text stays selected in Move mode
+      e.preventDefault();
+      edTextInput.blur();
+      if (ED.textIdx >= 0) edSetTool('move');
+    }
+  });
 
   /* Tabs */
   function edResizeSoon() {
@@ -3906,6 +4091,8 @@
     if (confirm('Changing the crop removes your annotations. Continue?')) {
       ED.annos = [];
       ED.annoKey = '';
+      ED.redo = [];
+      ED.textIdx = -1;
       return true;
     }
     return false;
@@ -3915,7 +4102,10 @@
     if (tab === ED.tab || !ED.bmp) return;
     if (tab === 'anno') {
       if (!edAnnosConsistent()) return;
+      if (ED.redo.length && ED.redoKey !== edQuadKey()) ED.redo = [];
       edBuildBase();
+    } else {
+      edCommitText();
     }
     ED.tab = tab;
     ED.drag = null;
@@ -3928,6 +4118,7 @@
     const anno = ED.tab === 'anno';
     edToolsCrop.hidden = anno;
     edToolsAnno.hidden = !anno;
+    edClearBtn.hidden = !anno;
     edTabCrop.classList.toggle('active', !anno);
     edTabAnno.classList.toggle('active', anno);
     setTitle(edTitle, ED.file ? ED.file.name : 'Edit',
@@ -3941,8 +4132,11 @@
     const tok = ++ED.token;
     ED.file = f;
     ED.bmp = null;
+    ED.srcBmp = null;
+    ED.rot = 0;
     ED.tab = 'crop';
     ED.drag = null; ED.temp = null; ED.textPos = null;
+    ED.redo = []; ED.textIdx = -1;
     editorEl.hidden = false;
     edSetTabUI();
     edSetTool('arrow');
@@ -3962,10 +4156,11 @@
     }
     if (tok !== ED.token || editorEl.hidden) { bmp.close(); return; }
 
-    ED.bmp = bmp;
-    ED.bw = bmp.width;
-    ED.bh = bmp.height;
     const e = f.edit;
+    ED.srcBmp = bmp;
+    ED.bmp = null;
+    ED.rot = (e && e.ui && e.ui.rot) || 0;
+    edApplyRot();
     if (e && e.ui) {
       ED.base = e.ui.base.map(p => ({ x: p.x, y: p.y }));
       edSetAngle(e.ui.angle);
@@ -3977,14 +4172,19 @@
     ED.annoKey = (e && e.annoKey) || '';
     ED.baseCanvas = null;
     ED.baseKey = '';
-    edTextInput.value = '';
+    edCommitText();
+    edSyncButtons();
     edRender();
   }
 
   function closeEditor(applied) {
     ED.token++;
     editorEl.hidden = true;
-    if (ED.bmp) { ED.bmp.close(); ED.bmp = null; }
+    const turned = ED.bmp && ED.bmp !== ED.srcBmp ? ED.bmp : null;
+    if (ED.srcBmp) ED.srcBmp.close();
+    if (turned) { turned.width = 0; turned.height = 0; }
+    ED.bmp = null;
+    ED.srcBmp = null;
     ED.baseCanvas = null;
     const f = ED.file;
     ED.file = null;
@@ -4000,13 +4200,13 @@
   document.getElementById('edDone').addEventListener('click', () => {
     if (!ED.bmp || !ED.file) return;
     if (!edAnnosConsistent()) return;
-    const quad = edIsFull() ? null : edQuad();
+    const quad = (edIsFull() && !ED.rot) ? null : edQuad().map(p => edToSrc(p, ED.rot));
     if (!quad && !ED.annos.length) {
       ED.file.edit = null;
     } else {
       ED.file.edit = {
         quad: quad,
-        ui: { base: ED.base.map(p => ({ x: p.x, y: p.y })), angle: ED.angle },
+        ui: { base: ED.base.map(p => ({ x: p.x, y: p.y })), angle: ED.angle, rot: ED.rot },
         annos: ED.annos.map(a => Object.assign({}, a)),
         annoKey: ED.annos.length ? ED.annoKey : ''
       };
@@ -4129,7 +4329,7 @@
     invalidateProcessedCache();
   });
 
-  ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setUseQuality', 'setUseIndex', 'setStart', 'setDigits', 'setSep']
+  ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setUseQuality', 'setStripExif', 'setSep']
     .forEach(id => {
       const el = document.getElementById(id);
       el.addEventListener('input', readNamingFromForm);
