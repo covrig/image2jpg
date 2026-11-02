@@ -590,6 +590,68 @@
       flex: 0 0 auto;
     }
 
+    /* ---- Scrollable conversion error dialog ---- */
+    .error-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 1600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .error-dialog[hidden] { display: none; }
+    .error-dialog-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+    }
+    .error-dialog-panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 520px;
+      max-height: 82vh;
+      max-height: 82dvh;
+      overflow: hidden;
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+    .error-dialog-header { flex: 0 0 auto; padding: 16px 16px 10px; }
+    .error-dialog-header h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    .error-dialog-summary { color: var(--text-sub); font-size: 13px; line-height: 1.45; }
+    .error-dialog-list {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 16px;
+    }
+    .error-dialog-item { padding: 11px 0; border-top: 1px solid var(--border-color); }
+    .error-dialog-name { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; margin-bottom: 4px; }
+    .error-dialog-message {
+      color: var(--text-sub);
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .error-dialog-footer {
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: flex-end;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      background: var(--card-bg);
+    }
+
     .name-preview {
       background: var(--field-bg);
       border: 1px solid var(--border-color);
@@ -960,7 +1022,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.7</h1>
+      <h1>IMAGE2JPG 1.7.1</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1125,6 +1187,21 @@
         <button class="btn-sheet primary" id="sheetDoneBtn">Done</button>
       </div>
     </div>
+  </div>
+
+  <!-- Scrollable details for images that could not be converted -->
+  <div class="error-dialog" id="conversionErrorDialog" hidden>
+    <div class="error-dialog-backdrop" id="conversionErrorBackdrop"></div>
+    <section class="error-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="conversionErrorTitle">
+      <div class="error-dialog-header">
+        <h2 id="conversionErrorTitle">Some images could not be converted</h2>
+        <p class="error-dialog-summary" id="conversionErrorSummary"></p>
+      </div>
+      <div class="error-dialog-list" id="conversionErrorList" role="list"></div>
+      <div class="error-dialog-footer">
+        <button class="btn-sheet primary" id="conversionErrorClose" type="button">Close</button>
+      </div>
+    </section>
   </div>
 
   <!-- Full-screen viewer: pinch-zoom, pan, previous / next, Edit -->
@@ -2406,6 +2483,48 @@
     }
   }
 
+  /* Show every failed file and its actual error in a scrollable in-app dialog.
+     Build entries with textContent so file names and error text are never treated as HTML. */
+  const conversionErrorDialog = document.getElementById('conversionErrorDialog');
+  const conversionErrorList = document.getElementById('conversionErrorList');
+  const conversionErrorSummary = document.getElementById('conversionErrorSummary');
+
+  function closeConversionErrorDialog() {
+    conversionErrorDialog.hidden = true;
+  }
+
+  document.getElementById('conversionErrorClose').addEventListener('click', closeConversionErrorDialog);
+  document.getElementById('conversionErrorBackdrop').addEventListener('click', closeConversionErrorDialog);
+  document.addEventListener('keydown', (e) => {
+    if (!conversionErrorDialog.hidden && e.key === 'Escape') closeConversionErrorDialog();
+  });
+
+  function showConversionFailures(failures, ready, total) {
+    conversionErrorSummary.textContent = `${ready} of ${total} images are ready. ${failures.length} ${failures.length === 1 ? 'image was' : 'images were'} skipped. Scroll through the list to see every error.`;
+    conversionErrorList.replaceChildren();
+
+    failures.forEach((failure) => {
+      const item = document.createElement('div');
+      item.className = 'error-dialog-item';
+      item.setAttribute('role', 'listitem');
+
+      const name = document.createElement('div');
+      name.className = 'error-dialog-name';
+      name.textContent = failure.name || 'Unnamed image';
+
+      const message = document.createElement('div');
+      message.className = 'error-dialog-message';
+      const prefix = failure.errorName && failure.errorName !== 'Error' ? `${failure.errorName}: ` : '';
+      message.textContent = prefix + (failure.message || 'No error details were provided by the browser.');
+
+      item.append(name, message);
+      conversionErrorList.append(item);
+    });
+
+    conversionErrorDialog.hidden = false;
+    document.getElementById('conversionErrorClose').focus();
+  }
+
   /* ------------------------------------------------------------------ *
    * Processing
    * ------------------------------------------------------------------ */
@@ -2423,7 +2542,11 @@
 
     const fail = (fileObj, err) => {
       console.error('Conversion failed:', fileObj.name, err);
-      failures.push({ name: fileObj.name, message: err && err.message ? err.message : String(err) });
+      const errorName = err && typeof err === 'object' && err.name ? String(err.name) : '';
+      const errorMessage = err && typeof err.message === 'string' && err.message.trim()
+        ? err.message.trim()
+        : (typeof err === 'string' ? err : String(err));
+      failures.push({ name: fileObj.name, errorName: errorName, message: errorMessage });
       if (fileObj.el) fileObj.el.classList.add('is-failed');
       if (fileObj.badge) {
         fileObj.badge.textContent = 'FAILED';
@@ -2522,7 +2645,7 @@
       hideProgress();
 
       if (processedFilesCache.length === 0) {
-        alert(`None of the ${total} images could be converted.\n\nFirst problem: ${failures[0] ? failures[0].message : 'unknown error'}`);
+        showConversionFailures(failures, 0, total);
         invalidateProcessedCache();
         return;
       }
@@ -2541,9 +2664,9 @@
       updateShareButtonLabel();
 
       if (failures.length) {
-        const names = failures.slice(0, 5).map(f => `• ${f.name}`).join('\n');
-        const more = failures.length > 5 ? `\n…and ${failures.length - 5} more` : '';
-        alert(`${processedFilesCache.length} of ${total} images are ready.\n\nSkipped:\n${names}${more}`);
+																				
+																					   
+        showConversionFailures(failures, processedFilesCache.length, total);
       }
     } catch (error) {
       hideProgress();
