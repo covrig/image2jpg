@@ -135,6 +135,11 @@
 
     .btn-icon[hidden] { display: none; }
 
+    .log-button { font-size: 12px; padding: 8px 10px; }
+    .log-button.has-errors { background: var(--danger-color); border-color: var(--danger-color); color: #ffffff; }
+    .log-button.all-good { background: var(--success-color); border-color: var(--success-color); color: #ffffff; }
+    .theme-choice-button { width: 100%; white-space: nowrap; }
+
     .card {
       background-color: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -473,6 +478,15 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .progress-error {
+      margin-top: 8px;
+      color: var(--danger-color);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+    .progress-error[hidden] { display: none; }
+
     /* ---- Full-window drop overlay (desktop) ---- */
     #dropOverlay {
       display: none;
@@ -633,6 +647,13 @@
       padding: 0 16px;
     }
     .error-dialog-item { padding: 11px 0; border-top: 1px solid var(--border-color); }
+    .error-dialog-item.is-error { border-left: 3px solid var(--danger-color); padding-left: 10px; }
+    .error-dialog-item.is-success { border-left: 3px solid var(--success-color); padding-left: 10px; }
+    .log-item-heading { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+    .log-level { flex: 0 0 auto; border-radius: 5px; padding: 2px 5px; font-size: 9px; line-height: 1.4; font-weight: 800; letter-spacing: 0.4px; }
+    .log-level.is-error { color: #ffffff; background: var(--danger-color); }
+    .log-level.is-success { color: #ffffff; background: var(--success-color); }
+    .log-level.is-info { color: var(--text-main); background: var(--secondary-bg); }
     .error-dialog-name { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; margin-bottom: 4px; }
     .error-dialog-message {
       color: var(--text-sub);
@@ -691,7 +712,7 @@
 
     /* ---- Thumbnails are tappable; pencil badge marks edited photos ---- */
     .thumb-wrapper { cursor: pointer; }
-    #thumbGrid.is-locked .thumb-wrapper { cursor: default; }
+															
 
     .thumb-edited {
       position: absolute;
@@ -1022,11 +1043,11 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.7.3</h1>
+      <h1>IMAGE2JPG 1.7.5</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
-      <button class="btn-icon" id="themeBtn" title="Theme: follow system">◐</button>
+      <button class="btn-icon log-button" id="logBtn" title="Conversion / resize log" aria-label="Open conversion and resize log">☷ LOG</button>
       <button class="btn-icon" id="settingsBtn" title="Settings">⚙</button>
       <button class="btn-refresh" id="refreshBtn" title="Start over">
         <span>↺</span> RESET
@@ -1105,6 +1126,7 @@
       <div id="loaderText">Resizing images…</div>
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
       <div id="progressLabel">0% complete — 0 of 0 images</div>
+      <div id="progressError" class="progress-error" role="status" aria-live="polite" hidden></div>
     </div>
   </div>
 
@@ -1125,6 +1147,16 @@
       </div>
 
       <div class="name-preview" id="namePreview">photo.jpg</div>
+
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Appearance</div>
+          <div class="setting-desc">Choose light, dark or follow your device</div>
+        </div>
+        <div class="setting-control">
+          <button class="btn-sheet theme-choice-button" id="themeSettingBtn" type="button">◐ Follow system</button>
+        </div>
+      </div>
 
       <div class="setting-row">
         <div>
@@ -1189,17 +1221,17 @@
     </div>
   </div>
 
-  <!-- Scrollable details for images that could not be converted -->
-  <div class="error-dialog" id="conversionErrorDialog" hidden>
-    <div class="error-dialog-backdrop" id="conversionErrorBackdrop"></div>
-    <section class="error-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="conversionErrorTitle">
+  <!-- Scrollable conversion and resize log, including successful files and errors -->
+  <div class="error-dialog" id="conversionLogDialog" hidden>
+    <div class="error-dialog-backdrop" id="conversionLogBackdrop"></div>
+    <section class="error-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="conversionLogTitle">
       <div class="error-dialog-header">
-        <h2 id="conversionErrorTitle">Some images could not be converted</h2>
-        <p class="error-dialog-summary" id="conversionErrorSummary"></p>
+        <h2 id="conversionLogTitle">Conversion / Resize Log</h2>
+        <p class="error-dialog-summary" id="conversionLogSummary"></p>
       </div>
-      <div class="error-dialog-list" id="conversionErrorList" role="list"></div>
+      <div class="error-dialog-list" id="conversionLogList" role="list"></div>
       <div class="error-dialog-footer">
-        <button class="btn-sheet primary" id="conversionErrorClose" type="button">Close</button>
+        <button class="btn-sheet primary" id="conversionLogClose" type="button">Close</button>
       </div>
     </section>
   </div>
@@ -1304,6 +1336,13 @@
   let totalOriginalSize = 0;
   let fileIdSeq = 0;
   let isBusy = false;
+  let conversionHasRun = false;
+  let conversionLogEntries = [];
+  let conversionLogHasErrors = false;
+  let conversionLogHasRun = false;
+  let conversionLogInProgress = false;
+  let conversionLogBatchTotal = 0;
+  let conversionLogSequence = 0;
 
   const DEFAULT_NAMING = {
     prefix: 'Image',
@@ -1339,6 +1378,9 @@
   const loaderText = document.getElementById('loaderText');
   const progressFill = document.getElementById('progressFill');
   const progressLabel = document.getElementById('progressLabel');
+  const progressError = document.getElementById('progressError');
+  const logBtn = document.getElementById('logBtn');
+  const themeSettingBtn = document.getElementById('themeSettingBtn');
   const sizeSelect = document.getElementById('sizeSelect');
   const qualitySelect = document.getElementById('qualitySelect');
   const settingsSheet = document.getElementById('settingsSheet');
@@ -1359,6 +1401,7 @@
    * Theme — follows the system unless the user picks a side
    * ------------------------------------------------------------------ */
   const THEME_ICONS = { auto: '◐', light: '☀', dark: '🌙' };
+  const THEME_LABELS = { auto: 'Follow system', light: 'Light', dark: 'Dark' };
   const THEME_TITLES = {
     auto: 'Theme: follow system',
     light: 'Theme: light',
@@ -1372,9 +1415,10 @@
       ? (lightQuery.matches ? 'light' : 'dark')
       : themePref;
     document.documentElement.setAttribute('data-theme', resolved);
-    const themeBtn = document.getElementById('themeBtn');
-    themeBtn.textContent = THEME_ICONS[themePref];
-    themeBtn.title = THEME_TITLES[themePref];
+														 
+    themeSettingBtn.textContent = `${THEME_ICONS[themePref]} ${THEME_LABELS[themePref]}`;
+    themeSettingBtn.title = THEME_TITLES[themePref];
+    themeSettingBtn.setAttribute('aria-label', THEME_TITLES[themePref]);
     metaThemeColor.setAttribute('content', resolved === 'light' ? '#f2f2f7' : '#000000');
   }
 
@@ -1425,8 +1469,15 @@
    * ------------------------------------------------------------------ */
   function showProgress(title) {
     loaderText.textContent = title;
+    progressError.textContent = '';
+    progressError.hidden = true;
     setProgress(0, 1, '');
     loader.style.display = 'flex';
+  }
+
+  function showProgressError(message) {
+    progressError.textContent = `⚠ ${message}`;
+    progressError.hidden = false;
   }
 
   function hideProgress() {
@@ -1714,6 +1765,7 @@
 
   /* After conversion: accent blue, and the label shows the format actually produced. */
   function markThumbConverted(fileObj, outFile) {
+    fileObj.outputFile = outFile;
     const mime = (outFile && outFile.type) || '';
     const label = mime ? extFromMime(mime) : (fileObj.extLabel || 'img');
     if (fileObj.badge) {
@@ -1724,6 +1776,48 @@
       fileObj.sizeEl.textContent = `${fileObj.origSizeLabel} > ${formatBytes(outFile.size)}`;
       fileObj.sizeEl.className = 'thumb-size';
     }
+  }
+
+  function clearOutputThumbnail(fileObj) {
+    if (fileObj.outputThumbUrl) {
+      URL.revokeObjectURL(fileObj.outputThumbUrl);
+      thumbObjectUrls = thumbObjectUrls.filter(url => url !== fileObj.outputThumbUrl);
+      fileObj.outputThumbUrl = null;
+    }
+    if (fileObj.img) fileObj.img.src = fileObj.editThumbUrl || fileObj.baseThumb ||
+      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" fill="%232c2c2e"><rect width="120" height="120"/></svg>';
+  }
+
+  async function refreshOutputThumbnail(fileObj, outFile) {
+    if (!fileObj.img || !fileObj.el || !fileObj.el.isConnected) return;
+    let url;
+    let bmp = null;
+    try {
+      bmp = await bitmapFromBlob(outFile);
+      const scale = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
+      const canvas = paintToCanvas(
+        bmp,
+        Math.max(1, Math.round(bmp.width * scale)),
+        Math.max(1, Math.round(bmp.height * scale)),
+        true
+      );
+      bmp.close();
+      bmp = null;
+      const blob = await canvasToBlob(canvas, 'image/jpeg', 0.75);
+      canvas.width = 0; canvas.height = 0;
+      url = URL.createObjectURL(blob);
+    } catch (err) {
+      if (bmp && bmp.close) bmp.close();
+      url = URL.createObjectURL(outFile);
+    }
+    if (fileObj.outputFile !== outFile || !fileObj.el || !fileObj.el.isConnected) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+    clearOutputThumbnail(fileObj);
+    fileObj.outputThumbUrl = url;
+    thumbObjectUrls.push(url);
+    fileObj.img.src = url;
   }
 
   /* ------------------------------------------------------------------ *
@@ -1913,7 +2007,7 @@
 
     /* Tap a thumbnail to open the full-screen viewer. */
     wrap.addEventListener('click', () => {
-      if (isBusy || isProcessed) return;       // viewer and editor are off once the batch is converted
+      if (isBusy) return;
       const idx = selectedFiles.findIndex(f => f.id === fileObj.id);
       if (idx !== -1) openViewer(idx);
     });
@@ -1987,9 +2081,15 @@
   }
 
   function invalidateProcessedCache() {
-    /* Settings changed, so any "converted" styling on the thumbnails is void. */
+    /* Settings changed, so any converted previews, results and run log are stale. */
     isProcessed = false;
-    thumbGrid.classList.remove('is-locked');
+    conversionHasRun = false;
+    selectedFiles.forEach(fileObj => {
+      fileObj.outputFile = null;
+      fileObj.converted = false;
+      clearOutputThumbnail(fileObj);
+    });
+    resetConversionLog();
     processedFilesCache = [];
     shareOffset = 0;
     singleActionContainer.style.display = 'block';
@@ -2517,47 +2617,112 @@
     }
   }
 
-  /* Show every failed file and its actual error in a scrollable in-app dialog.
-     Build entries with textContent so file names and error text are never treated as HTML. */
-  const conversionErrorDialog = document.getElementById('conversionErrorDialog');
-  const conversionErrorList = document.getElementById('conversionErrorList');
-  const conversionErrorSummary = document.getElementById('conversionErrorSummary');
+  /* Conversion / resize log. All user-provided names and browser messages are
+     inserted as text, never parsed as HTML. */
+  const conversionLogDialog = document.getElementById('conversionLogDialog');
+  const conversionLogList = document.getElementById('conversionLogList');
+  const conversionLogSummary = document.getElementById('conversionLogSummary');
+  const conversionLogClose = document.getElementById('conversionLogClose');
 
-  function closeConversionErrorDialog() {
-    conversionErrorDialog.hidden = true;
+  function updateLogButton() {
+    logBtn.classList.remove('has-errors', 'all-good');
+    if (!conversionLogHasRun) {
+      logBtn.title = 'Conversion / resize log';
+      return;
+    }
+    if (conversionLogHasErrors) {
+      logBtn.classList.add('has-errors');
+      logBtn.title = 'Errors occurred — open the conversion / resize log';
+    } else if (conversionLogInProgress) {
+      logBtn.title = 'Resize in progress — conversion log';
+    } else {
+      logBtn.classList.add('all-good');
+      logBtn.title = 'Resize completed successfully — open the log';
+    }
   }
 
-  document.getElementById('conversionErrorClose').addEventListener('click', closeConversionErrorDialog);
-  document.getElementById('conversionErrorBackdrop').addEventListener('click', closeConversionErrorDialog);
-  document.addEventListener('keydown', (e) => {
-    if (!conversionErrorDialog.hidden && e.key === 'Escape') closeConversionErrorDialog();
-  });
+  function resetConversionLog() {
+    conversionLogEntries = [];
+    conversionLogHasErrors = false;
+    conversionLogHasRun = false;
+    conversionLogInProgress = false;
+    conversionLogBatchTotal = 0;
+    conversionLogSequence = 0;
+    updateLogButton();
+  }
 
-  function showConversionFailures(failures, ready, total) {
-    conversionErrorSummary.textContent = `${ready} of ${total} images are ready. ${failures.length} ${failures.length === 1 ? 'image was' : 'images were'} skipped. Scroll through the list to see every error.`;
-    conversionErrorList.replaceChildren();
+  function addConversionLogEntry(type, title, message, order) {
+    if (type === 'error') conversionLogHasErrors = true;
+    const sequence = conversionLogSequence++;
+    conversionLogEntries.push({
+      type,
+      title: title || 'Log entry',
+      message: message || '',
+      order: Number.isFinite(order) ? order : (100000 + sequence),
+      sequence
+    });
+    updateLogButton();
+  }
 
-    failures.forEach((failure) => {
+  function renderConversionLog() {
+    conversionLogList.replaceChildren();
+    const successes = conversionLogEntries.filter(entry => entry.type === 'success').length;
+    const errors = conversionLogEntries.filter(entry => entry.type === 'error').length;
+
+    if (!conversionLogHasRun) {
+      conversionLogSummary.textContent = 'No conversion or resize run has been recorded yet.';
+    } else {
+      const total = conversionLogBatchTotal;
+      conversionLogSummary.textContent = `${successes} of ${total} images converted successfully. ${errors === 1 ? '1 error' : `${errors} errors`} recorded.`;
+    }
+
+    const entries = conversionLogEntries.slice().sort((a, b) => a.order - b.order || a.sequence - b.sequence);
+    entries.forEach(entry => {
       const item = document.createElement('div');
-      item.className = 'error-dialog-item';
+      item.className = 'error-dialog-item' +
+        (entry.type === 'error' ? ' is-error' : (entry.type === 'success' ? ' is-success' : ''));
       item.setAttribute('role', 'listitem');
 
+      const heading = document.createElement('div');
+      heading.className = 'log-item-heading';
+      const level = document.createElement('span');
+      level.className = 'log-level is-' + (entry.type === 'error' ? 'error' : (entry.type === 'success' ? 'success' : 'info'));
+      level.textContent = entry.type === 'error' ? 'ERROR' : (entry.type === 'success' ? 'OK' : 'INFO');
       const name = document.createElement('div');
       name.className = 'error-dialog-name';
-      name.textContent = failure.name || 'Unnamed image';
+      name.textContent = entry.title;
+      heading.append(level, name);
+													
+												 
+																										
+																										   
 
-      const message = document.createElement('div');
-      message.className = 'error-dialog-message';
-      const prefix = failure.errorName && failure.errorName !== 'Error' ? `${failure.errorName}: ` : '';
-      message.textContent = prefix + (failure.message || 'No error details were provided by the browser.');
-
-      item.append(name, message);
-      conversionErrorList.append(item);
+      item.appendChild(heading);
+      if (entry.message) {
+        const message = document.createElement('div');
+        message.className = 'error-dialog-message';
+        message.textContent = entry.message;
+        item.appendChild(message);
+      }
+      conversionLogList.append(item);
     });
-
-    conversionErrorDialog.hidden = false;
-    document.getElementById('conversionErrorClose').focus();
   }
+
+  function closeConversionLogDialog() {
+    conversionLogDialog.hidden = true;
+  }
+
+  function openConversionLog() {
+    renderConversionLog();
+    conversionLogDialog.hidden = false;
+    conversionLogClose.focus();
+  }
+
+  conversionLogClose.addEventListener('click', closeConversionLogDialog);
+  document.getElementById('conversionLogBackdrop').addEventListener('click', closeConversionLogDialog);
+  document.addEventListener('keydown', (e) => {
+    if (!conversionLogDialog.hidden && e.key === 'Escape') closeConversionLogDialog();
+  });
 
   /* ------------------------------------------------------------------ *
    * Processing
@@ -2570,6 +2735,21 @@
     const usedNames = new Set();
     const total = selectedFiles.length;
 
+    resetConversionLog();
+    conversionLogHasRun = true;
+    conversionLogInProgress = true;
+    conversionLogBatchTotal = total;
+    updateLogButton();
+    const scaleDescription = scaleMode === 'box'
+      ? `${boxTag} max (${boxLong}×${boxShort})`
+      : `${Math.round(currentScale * 100)}%`;
+    addConversionLogEntry(
+      'info',
+      'Resize started',
+      `${total} image${total === 1 ? '' : 's'} queued · Output: JPEG · Scale: ${scaleDescription} · Quality: ${Math.round(currentQuality * 100)}% · EXIF: ${naming.stripExif ? 'removed' : 'preserved when supported'}`,
+      -1
+    );
+
     showProgress('Resizing images…');
     setProgress(0, total);
     await nextFrame();
@@ -2581,6 +2761,11 @@
         ? err.message.trim()
         : (typeof err === 'string' ? err : String(err));
       failures.push({ name: fileObj.name, errorName: errorName, message: errorMessage });
+      fileObj.outputFile = null;
+      const errorPrefix = errorName && errorName !== 'Error' ? `${errorName}: ` : '';
+      const fileIndex = selectedFiles.indexOf(fileObj);
+      addConversionLogEntry('error', fileObj.name, `${errorPrefix}${errorMessage}`, fileIndex);
+      showProgressError(`${failures.length} of ${total} image${total === 1 ? '' : 's'} failed. Open LOG for details.`);
       if (fileObj.el) fileObj.el.classList.add('is-failed');
       if (fileObj.badge) {
         fileObj.badge.textContent = 'FAILED';
@@ -2595,7 +2780,11 @@
     try {
       /* Wipe any leftovers from a previous run so colours start from the
          pre-conversion rule: white for HEIC, lime for everything else. */
-      selectedFiles.forEach(f => { f.converted = false; });
+      selectedFiles.forEach(f => {
+        f.converted = false;
+        f.outputFile = null;
+        clearOutputThumbnail(f);
+      });
       resetThumbBadges();
 
       const results = new Array(total).fill(null);
@@ -2674,18 +2863,46 @@
            HEIC -> jpg, Original -> whatever it stayed as (jpg / png / webp). */
         selectedFiles[i].converted = true;
         markThumbConverted(selectedFiles[i], outFile);
+        addConversionLogEntry(
+          'success',
+          outFile.name,
+          `${selectedFiles[i].name} → ${outFile.name} · ${formatBytes(selectedFiles[i].size)} → ${formatBytes(outFile.size)}`,
+          i
+        );
+        refreshOutputThumbnail(selectedFiles[i], outFile);
       }
 
-      hideProgress();
+      conversionHasRun = true;
+      conversionLogInProgress = false;
+      updateLogButton();
+      if (failures.length) {
+        showProgressError(`${failures.length} image${failures.length === 1 ? '' : 's'} could not be converted. Open LOG for details.`);
+      }
+      addConversionLogEntry(
+        'info',
+        failures.length ? 'Resize finished with errors' : 'Resize finished successfully',
+        `${processedFilesCache.length} of ${total} images converted; ${failures.length} failed.`,
+        total + 1
+      );
 
       if (processedFilesCache.length === 0) {
-        showConversionFailures(failures, 0, total);
-        invalidateProcessedCache();
+        isProcessed = false;
+        singleActionContainer.style.display = 'block';
+        dualActionContainer.style.display = 'none';
+        actionButton.disabled = false;
+        actionButton.classList.remove('ready-state');
+        actionButton.textContent = `Retry ${total} image${total === 1 ? '' : 's'}`;
+        showProgressError(failures.length
+          ? `All ${total} images failed. Open LOG for details.`
+          : 'No images were converted. Open LOG for details.');
+        await nextFrame();
+        await new Promise(resolve => setTimeout(resolve, 900));
+        hideProgress();
         return;
       }
 
       isProcessed = true;
-      thumbGrid.classList.add('is-locked');
+										   
       const totalConvertedSize = processedFilesCache.reduce((acc, f) => acc + f.size, 0);
       const doneOriginal = selectedFiles
         .filter(f => f.converted)
@@ -2697,14 +2914,21 @@
       shareOffset = 0;
       updateShareButtonLabel();
 
-      if (failures.length) {
-																				
-																					   
-        showConversionFailures(failures, processedFilesCache.length, total);
-      }
-    } catch (error) {
+      await nextFrame();
+      if (failures.length) await new Promise(resolve => setTimeout(resolve, 900));
       hideProgress();
-      alert('Something went wrong while resizing: ' + (error && error.message ? error.message : error));
+																			
+	   
+    } catch (error) {
+      const message = error && error.message ? error.message : String(error);
+      conversionHasRun = true;
+      conversionLogInProgress = false;
+      addConversionLogEntry('error', 'Resize operation aborted', message);
+      showProgressError('Resize stopped because of an error. Open LOG for details.');
+      await nextFrame();
+      await new Promise(resolve => setTimeout(resolve, 900));
+      hideProgress();
+																										
     } finally {
       isBusy = false;
     }
@@ -2821,7 +3045,15 @@
   async function downloadAllZip() {
     if (processedFilesCache.length === 0 || isBusy) return;
     if (typeof JSZip !== 'function') {
-      alert('The ZIP library is not loaded. Reconnect once so it can be cached for offline use.');
+      const message = 'The ZIP library is not loaded. Reconnect once so it can be cached for offline use.';
+      addConversionLogEntry('error', 'ZIP library unavailable', message);
+      isBusy = true;
+      showProgress('Building ZIP archive…');
+      showProgressError('ZIP creation could not start. Open LOG for details.');
+      await nextFrame();
+      await new Promise(resolve => setTimeout(resolve, 900));
+      hideProgress();
+      isBusy = false;
       return;
     }
     isBusy = true;
@@ -2836,8 +3068,13 @@
         progressLabel.textContent = `${pct}% complete — packing ${processedFilesCache.length} images`;
       });
       saveBlobAs(zipContent, zipFileName());
+      addConversionLogEntry('info', 'ZIP archive created', `${processedFilesCache.length} converted images packed into ${zipFileName()}.`);
     } catch (err) {
-      alert('The ZIP archive could not be built: ' + (err && err.message ? err.message : err));
+      const message = err && err.message ? err.message : String(err);
+      addConversionLogEntry('error', 'ZIP archive could not be built', message);
+      showProgressError('ZIP creation failed. Open LOG for details.');
+      await nextFrame();
+      await new Promise(resolve => setTimeout(resolve, 900));
     } finally {
       hideProgress();
       isBusy = false;
@@ -3250,7 +3487,9 @@
   /* Keeps the original thumbnail so Reset can bring it back. */
   function setBaseThumb(fileObj, url) {
     fileObj.baseThumb = url;
-    if (!fileObj.edit && fileObj.img) fileObj.img.src = url;
+    /* An original thumbnail can finish decoding after conversion; never let it
+       overwrite the converted thumbnail currently shown in the grid. */
+    if (!fileObj.edit && !fileObj.outputFile && fileObj.img) fileObj.img.src = url;
   }
 
   /* ------------------------------------------------------------------ *
@@ -3361,6 +3600,7 @@
   const viewerImg = document.getElementById('viewerImg');
   const viewerMsg = document.getElementById('viewerMsg');
   const viewerTitle = document.getElementById('viewerTitle');
+  const viewerEditBtn = document.getElementById('viewerEdit');
   const viewerPrev = document.getElementById('viewerPrev');
   const viewerNext = document.getElementById('viewerNext');
   const V = { index: 0, s: 1, tx: 0, ty: 0, url: null, token: 0, ptrs: new Map(), g: null, lastTap: 0 };
@@ -3480,9 +3720,14 @@
     const f = selectedFiles[V.index];
     if (!f) { closeViewer(); return; }
     const tok = ++V.token;
+    const convertedFile = isProcessed && f.outputFile ? f.outputFile : null;
     const edited = !!exportEdit(f);
-    setTitle(viewerTitle, f.name,
-      `${V.index + 1} / ${selectedFiles.length} · ${formatBytes(f.size)}${edited ? ' · edited' : ''}`);
+    viewerEditBtn.hidden = isProcessed || conversionHasRun;
+    const displayName = convertedFile ? convertedFile.name : f.name;
+    const displaySize = convertedFile ? convertedFile.size : f.size;
+    const previewNote = convertedFile ? ' · converted' : (edited ? ' · edited' : '');
+    setTitle(viewerTitle, displayName,
+      `${V.index + 1} / ${selectedFiles.length} · ${formatBytes(displaySize)}${previewNote}`);
     viewerPrev.disabled = V.index === 0;
     viewerNext.disabled = V.index === selectedFiles.length - 1;
     viewerMsg.textContent = 'Loading…';
@@ -3491,7 +3736,9 @@
 
     let url;
     try {
-      if (edited) {
+      if (convertedFile) {
+        url = URL.createObjectURL(convertedFile);
+      } else if (edited) {
         const cv = await renderEditedCanvas(f, PREVIEW_MAX);
         const blob = await canvasToBlob(cv, 'image/jpeg', 0.9);
         cv.width = 0; cv.height = 0;
@@ -3502,7 +3749,7 @@
         url = URL.createObjectURL(f.src);
       }
     } catch (err) {
-      console.error('Viewer load failed:', f.name, err);
+      console.error('Viewer load failed:', displayName, err);
       if (tok === V.token) viewerMsg.textContent = 'Could not load this photo.';
       return;
     }
@@ -3544,7 +3791,8 @@
   document.getElementById('viewerClose').addEventListener('click', closeViewer);
   viewerPrev.addEventListener('click', () => viewerStep(-1));
   viewerNext.addEventListener('click', () => viewerStep(1));
-  document.getElementById('viewerEdit').addEventListener('click', () => {
+  viewerEditBtn.addEventListener('click', () => {
+    if (isProcessed || conversionHasRun) return;
     const f = selectedFiles[V.index];
     if (f) openEditor(f);
   });
@@ -5200,7 +5448,8 @@
   sizeSelect.addEventListener('change', applySizeChoice);
   qualitySelect.addEventListener('change', applyQualityChoice);
 
-  document.getElementById('themeBtn').addEventListener('click', cycleTheme);
+  themeSettingBtn.addEventListener('click', cycleTheme);
+  logBtn.addEventListener('click', openConversionLog);
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
   document.getElementById('refreshBtn').addEventListener('click', resetApp);
   document.getElementById('sheetCloseBtn').addEventListener('click', closeSettings);
