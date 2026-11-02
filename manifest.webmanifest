@@ -1,5 +1,5 @@
 {
-  "name": "Quick Share — Image Resizer, Converter",
+  "name": "IMAGE2JPG — Image Resizer, Converter",
   "short_name": "IMAGE2JPG",
   "description": "Resize, convert and share images entirely on your device. Works offline.",
   "start_url": "./index.html",
