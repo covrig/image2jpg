@@ -1047,7 +1047,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.7.6</h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.7</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1277,7 +1277,7 @@
       </div>
       <div class="ed-row">
         <button class="ov-btn" id="edRotate" type="button">⟳ Rotate 90°</button>
-        <button class="ov-btn" id="edAuto" type="button" title="Detect the document edges automatically">📄 Auto Crop</button>
+        <button class="ov-btn" id="edAuto" type="button" title="Detect the document edges automatically">📄 Auto Crop Document</button>
       </div>
       <div class="ed-row">
         <button class="ov-btn" id="edFull" type="button">Reset C/S/R</button>
@@ -5255,7 +5255,7 @@
     edTabCrop.classList.toggle('active', !anno);
     edTabAnno.classList.toggle('active', anno);
     setTitle(edTitle, ED.file ? ED.file.name : 'Edit',
-      anno ? 'Draw, or use Move to reposition' : 'Corners fix perspective; edge dots crop without skew');
+      anno ? 'Draw, or use Move to reposition' : 'Corners fix perspective; edges only crop');
   }
 
   edTabCrop.addEventListener('click', () => edSwitchTab('crop'));
