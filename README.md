@@ -1,4 +1,4 @@
-# IMAGE![2](https://img.shields.io/badge/2-orange?style=flat)JPG
+# IMAGE ![2](https://img.shields.io/badge/2-orange?style=flat) JPG
 
 A client-side, single-page web app that batch-converts images (HEIC, JPEG, PNG,
 WebP, GIF, AVIF and more) to JPG with resizing and quality control — no uploads,
