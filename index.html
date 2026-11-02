@@ -137,6 +137,8 @@
 
     .log-button { font-size: 12px; padding: 8px 10px; }
     .log-button.has-errors { background: var(--danger-color); border-color: var(--danger-color); color: #ffffff; }
+    .log-button.has-warnings { background: var(--warn-color); border-color: var(--warn-color); color: #000000; }
+    :root[data-theme="light"] .log-button.has-warnings { color: #ffffff; }
     .log-button.all-good { background: var(--success-color); border-color: var(--success-color); color: #ffffff; }
     .theme-choice-button { width: 100%; white-space: nowrap; }
 
@@ -649,10 +651,13 @@
     .error-dialog-item { padding: 11px 0; border-top: 1px solid var(--border-color); }
     .error-dialog-item.is-error { border-left: 3px solid var(--danger-color); padding-left: 10px; }
     .error-dialog-item.is-success { border-left: 3px solid var(--success-color); padding-left: 10px; }
+    .error-dialog-item.is-warning { border-left: 3px solid var(--warn-color); padding-left: 10px; }
     .log-item-heading { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
     .log-level { flex: 0 0 auto; border-radius: 5px; padding: 2px 5px; font-size: 9px; line-height: 1.4; font-weight: 800; letter-spacing: 0.4px; }
     .log-level.is-error { color: #ffffff; background: var(--danger-color); }
     .log-level.is-success { color: #ffffff; background: var(--success-color); }
+    .log-level.is-warning { color: #000000; background: var(--warn-color); }
+    :root[data-theme="light"] .log-level.is-warning { color: #ffffff; }
     .log-level.is-info { color: var(--text-main); background: var(--secondary-bg); }
     .error-dialog-name { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; margin-bottom: 4px; }
     .error-dialog-message {
@@ -712,7 +717,6 @@
 
     /* ---- Thumbnails are tappable; pencil badge marks edited photos ---- */
     .thumb-wrapper { cursor: pointer; }
-															
 
     .thumb-edited {
       position: absolute;
@@ -1043,7 +1047,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE2JPG 1.7.5</h1>
+      <h1>IMAGE2JPG 1.7.6</h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1339,6 +1343,7 @@
   let conversionHasRun = false;
   let conversionLogEntries = [];
   let conversionLogHasErrors = false;
+  let conversionLogHasWarnings = false;
   let conversionLogHasRun = false;
   let conversionLogInProgress = false;
   let conversionLogBatchTotal = 0;
@@ -1415,7 +1420,6 @@
       ? (lightQuery.matches ? 'light' : 'dark')
       : themePref;
     document.documentElement.setAttribute('data-theme', resolved);
-														 
     themeSettingBtn.textContent = `${THEME_ICONS[themePref]} ${THEME_LABELS[themePref]}`;
     themeSettingBtn.title = THEME_TITLES[themePref];
     themeSettingBtn.setAttribute('aria-label', THEME_TITLES[themePref]);
@@ -1936,6 +1940,7 @@
         src: src,
         kind: s.kind,
         note: patched ? 'Incomplete file: the bottom part is missing' : note,
+        patchedOnLoad: patched,
         isHeic: isHeic
       };
       selectedFiles.push(fileObj);
@@ -2625,14 +2630,19 @@
   const conversionLogClose = document.getElementById('conversionLogClose');
 
   function updateLogButton() {
-    logBtn.classList.remove('has-errors', 'all-good');
+    logBtn.classList.remove('has-errors', 'has-warnings', 'all-good');
     if (!conversionLogHasRun) {
       logBtn.title = 'Conversion / resize log';
       return;
     }
     if (conversionLogHasErrors) {
       logBtn.classList.add('has-errors');
-      logBtn.title = 'Errors occurred — open the conversion / resize log';
+      logBtn.title = conversionLogHasWarnings
+        ? 'Errors occurred; one or more truncated JPEGs were also patched — open the log'
+        : 'Errors occurred — open the conversion / resize log';
+    } else if (conversionLogHasWarnings) {
+      logBtn.classList.add('has-warnings');
+      logBtn.title = 'One or more truncated JPEGs were patched on load — open the log';
     } else if (conversionLogInProgress) {
       logBtn.title = 'Resize in progress — conversion log';
     } else {
@@ -2644,6 +2654,7 @@
   function resetConversionLog() {
     conversionLogEntries = [];
     conversionLogHasErrors = false;
+    conversionLogHasWarnings = false;
     conversionLogHasRun = false;
     conversionLogInProgress = false;
     conversionLogBatchTotal = 0;
@@ -2653,6 +2664,7 @@
 
   function addConversionLogEntry(type, title, message, order) {
     if (type === 'error') conversionLogHasErrors = true;
+    if (type === 'warning') conversionLogHasWarnings = true;
     const sequence = conversionLogSequence++;
     conversionLogEntries.push({
       type,
@@ -2668,34 +2680,33 @@
     conversionLogList.replaceChildren();
     const successes = conversionLogEntries.filter(entry => entry.type === 'success').length;
     const errors = conversionLogEntries.filter(entry => entry.type === 'error').length;
+    const patched = conversionLogEntries.filter(entry => entry.type === 'warning').length;
 
     if (!conversionLogHasRun) {
       conversionLogSummary.textContent = 'No conversion or resize run has been recorded yet.';
     } else {
       const total = conversionLogBatchTotal;
-      conversionLogSummary.textContent = `${successes} of ${total} images converted successfully. ${errors === 1 ? '1 error' : `${errors} errors`} recorded.`;
+      const parts = [`${successes} of ${total} converted`, `${errors} ${errors === 1 ? 'error' : 'errors'}`];
+      if (patched) parts.push(`${patched} JPEG${patched === 1 ? '' : 's'} patched on load`);
+      conversionLogSummary.textContent = parts.join(' · ');
     }
 
     const entries = conversionLogEntries.slice().sort((a, b) => a.order - b.order || a.sequence - b.sequence);
     entries.forEach(entry => {
       const item = document.createElement('div');
       item.className = 'error-dialog-item' +
-        (entry.type === 'error' ? ' is-error' : (entry.type === 'success' ? ' is-success' : ''));
+        (entry.type === 'error' ? ' is-error' : (entry.type === 'success' ? ' is-success' : (entry.type === 'warning' ? ' is-warning' : '')));
       item.setAttribute('role', 'listitem');
 
       const heading = document.createElement('div');
       heading.className = 'log-item-heading';
       const level = document.createElement('span');
-      level.className = 'log-level is-' + (entry.type === 'error' ? 'error' : (entry.type === 'success' ? 'success' : 'info'));
-      level.textContent = entry.type === 'error' ? 'ERROR' : (entry.type === 'success' ? 'OK' : 'INFO');
+      level.className = 'log-level is-' + (entry.type === 'error' ? 'error' : (entry.type === 'success' ? 'success' : (entry.type === 'warning' ? 'warning' : 'info')));
+      level.textContent = entry.type === 'error' ? 'ERROR' : (entry.type === 'success' ? 'OK' : (entry.type === 'warning' ? 'PATCHED' : 'INFO'));
       const name = document.createElement('div');
       name.className = 'error-dialog-name';
       name.textContent = entry.title;
       heading.append(level, name);
-													
-												 
-																										
-																										   
 
       item.appendChild(heading);
       if (entry.message) {
@@ -2745,10 +2756,20 @@
       : `${Math.round(currentScale * 100)}%`;
     addConversionLogEntry(
       'info',
-      'Resize started',
-      `${total} image${total === 1 ? '' : 's'} queued · Output: JPEG · Scale: ${scaleDescription} · Quality: ${Math.round(currentQuality * 100)}% · EXIF: ${naming.stripExif ? 'removed' : 'preserved when supported'}`,
+      'Run settings',
+      `JPEG · ${scaleDescription} · Quality ${Math.round(currentQuality * 100)}%`,
       -1
     );
+    selectedFiles.forEach((fileObj, index) => {
+      if (fileObj.patchedOnLoad) {
+        addConversionLogEntry(
+          'warning',
+          fileObj.name,
+          'Truncated JPEG patched on load by adding the missing end-of-image marker. Some image data may still be missing.',
+          index
+        );
+      }
+    });
 
     showProgress('Resizing images…');
     setProgress(0, total);
@@ -2865,8 +2886,8 @@
         markThumbConverted(selectedFiles[i], outFile);
         addConversionLogEntry(
           'success',
-          outFile.name,
-          `${selectedFiles[i].name} → ${outFile.name} · ${formatBytes(selectedFiles[i].size)} → ${formatBytes(outFile.size)}`,
+          selectedFiles[i].name,
+          `${extFromMime(outFile.type).toUpperCase()} · ${formatBytes(selectedFiles[i].size)} → ${formatBytes(outFile.size)} · Output: ${outFile.name}`,
           i
         );
         refreshOutputThumbnail(selectedFiles[i], outFile);
@@ -2878,13 +2899,6 @@
       if (failures.length) {
         showProgressError(`${failures.length} image${failures.length === 1 ? '' : 's'} could not be converted. Open LOG for details.`);
       }
-      addConversionLogEntry(
-        'info',
-        failures.length ? 'Resize finished with errors' : 'Resize finished successfully',
-        `${processedFilesCache.length} of ${total} images converted; ${failures.length} failed.`,
-        total + 1
-      );
-
       if (processedFilesCache.length === 0) {
         isProcessed = false;
         singleActionContainer.style.display = 'block';
@@ -2902,7 +2916,6 @@
       }
 
       isProcessed = true;
-										   
       const totalConvertedSize = processedFilesCache.reduce((acc, f) => acc + f.size, 0);
       const doneOriginal = selectedFiles
         .filter(f => f.converted)
@@ -2917,8 +2930,6 @@
       await nextFrame();
       if (failures.length) await new Promise(resolve => setTimeout(resolve, 900));
       hideProgress();
-																			
-	   
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
       conversionHasRun = true;
@@ -2928,7 +2939,6 @@
       await nextFrame();
       await new Promise(resolve => setTimeout(resolve, 900));
       hideProgress();
-																										
     } finally {
       isBusy = false;
     }
