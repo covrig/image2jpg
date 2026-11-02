@@ -1,4 +1,4 @@
-# IMAGE2JPG
+# IMAGE<span style="color: orangered;">2</span>JPG
 
 A client-side, single-page web app that batch-converts images (HEIC, JPEG, PNG,
 WebP, GIF, AVIF and more) to JPG with resizing and quality control — no uploads,
