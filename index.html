@@ -957,6 +957,7 @@
     #edToolsCrop .ov-btn { padding: 8px 9px; font-size: 13px; }
     #edZoomVal { flex: 0 0 44px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     #edAngleVal { flex: 0 0 52px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    #edEnhanceVal { flex: 0 0 44px; text-align: right; font-size: 12px; font-weight: 700; color: #8e8e93; font-variant-numeric: tabular-nums; }
     #edTextRow input[type="text"] { flex: 1 1 auto; min-width: 0; text-align: center; }
 
     /* The text box and loupe-zoom rows keep their space while hidden (only invisible),
@@ -1104,7 +1105,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.1</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1328,6 +1329,11 @@
     <div class="ed-tools-wrap" id="edToolsWrap">
     <div class="ed-tools" id="edToolsCrop">
       <div class="ed-row">
+        <span class="ed-lbl">Auto Enhance</span>
+        <input type="range" id="edEnhance" min="0" max="100" step="1" value="0" aria-label="Auto Enhance strength" title="Adaptive dehaze, exposure, local contrast and sharpening">
+        <span id="edEnhanceVal">Off</span>
+      </div>
+      <div class="ed-row">
         <span class="ed-lbl">Straighten</span>
         <input type="range" id="edAngle" min="-45" max="45" step="0.1" value="0" aria-label="Straighten">
         <span id="edAngleVal">0.0°</span>
@@ -1337,8 +1343,8 @@
         <button class="ov-btn" id="edAuto" type="button" title="Detect the document edges automatically">📄 Auto Crop Document</button>
       </div>
       <div class="ed-row">
-        <button class="ov-btn" id="edFull" type="button">Reset C/S/R</button>
-        <button class="ov-btn" id="edResetAll" type="button">Reset C/S/AN</button>
+        <button class="ov-btn" id="edFull" type="button">Reset Transform</button>
+        <button class="ov-btn" id="edResetAll" type="button">Reset All</button>
       </div>
     </div>
 
@@ -1372,7 +1378,7 @@
     </div>
 
     <div class="ov-bar bottom">
-      <button class="ov-btn active" id="edTabCrop" type="button">CROP/STR/ROT</button>
+      <button class="ov-btn active" id="edTabCrop" type="button">ADJUST</button>
       <button class="ov-btn" id="edTabAnno" type="button">ANNOTATE</button>
     </div>
   </div>
@@ -2517,7 +2523,7 @@
   function getWorkerUrl() {
     if (!workerUrl) {
       // The edit functions are written once in this file and copied into the worker as source text.
-      const shared = [cropDims, warpQuad, edUnitToQuad, edDrawImageInQuad, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
+      const shared = [cropDims, warpQuad, edUnitToQuad, edDrawImageInQuad, drawAnnotations, applyAutoEnhance, renderEdited].map(fn => fn.toString()).join('\n');
       const src = "const LIBHEIF_URL_W = '" + LIBHEIF_URL + "';\n" + shared + "\n" + WORKER_BODY;
       workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
     }
@@ -2938,7 +2944,6 @@
           outFile = new File([outBlob], name, { type: mime });
         }
         processedFilesCache.push(outFile);
-        <!-- Badge turns accent blue and reports the format it really came out as: -->
 
         selectedFiles[i].converted = true;
         markThumbConverted(selectedFiles[i], outFile);
@@ -3235,9 +3240,9 @@
           shareOffset = 0;
           store('qs_share_chunk', String(shareChunkSize));
           updateShareButtonLabel();
-          alert(`Android would not take ${chunk.length} images at once.\n\nTap Share again to send them ${shareChunkSize} at a time, or download the ZIP.`);
+          alert(`Could not take ${chunk.length} images at once.\n\nTap Share again to send them ${shareChunkSize} at a time, or download the ZIP.`);
         } else {
-          alert('Android refused the share.\n\nDownload the ZIP instead.');
+          alert('Refused the share.\n\nDownload the ZIP instead.');
         }
       } else {
         alert(`Sharing failed: ${message}\n\nDownload the ZIP instead.`);
@@ -3496,7 +3501,229 @@
     ctx.restore();
   }
 
-  /* Crops / corrects perspective, then draws annotations. Returns a canvas of size t. */
+  /*
+   * Adaptive photo enhancement. This is a real multi-stage pass rather than a CSS
+   * brightness lift: a dark-channel dehaze estimate, percentile-based haze/washed-
+   * out contrast recovery, adaptive shadow/highlight/exposure correction, colour
+   * recovery, and a Gaussian unsharp mask. Kept self-contained so the exact same
+   * routine runs in the editor, thumbnails, and conversion Web Workers.
+   */
+  function applyAutoEnhance(canvas, strength) {
+    const amount = Math.max(0, Math.min(1, (Number(strength) || 0) / 100));
+    if (!canvas || !amount || !canvas.width || !canvas.height) return canvas;
+
+    const w = canvas.width, h = canvas.height, count = w * h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const image = ctx.getImageData(0, 0, w, h);
+    const pixels = image.data;
+    const hist = new Uint32Array(256);
+    const darkHist = new Uint32Array(256);
+    const sampleStride = Math.max(1, Math.floor(count / 350000));
+    const dark = new Uint8Array(count);
+    let samples = 0;
+
+    // A sampled luminance histogram gives robust black, mid and white points.
+    for (let p = 0; p < count; p += sampleStride) {
+      const i = p * 4;
+      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+      const y = Math.max(0, Math.min(255, Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b)));
+      hist[y]++;
+      samples++;
+    }
+    function percentile(histogram, total, q) {
+      const target = Math.max(1, Math.ceil(total * q));
+      let sum = 0;
+      for (let i = 0; i < 256; i++) {
+        sum += histogram[i];
+        if (sum >= target) return i;
+      }
+      return 255;
+    }
+    const p02 = percentile(hist, samples, 0.02);
+    const p50 = percentile(hist, samples, 0.50);
+    const p98 = percentile(hist, samples, 0.98);
+    const dynamicRange = Math.max(1, p98 - p02);
+
+    // Build the source dark channel and find atmospheric light from the brightest
+    // pixels whose darkest colour channel is still high (dark-channel prior).
+    for (let p = 0; p < count; p++) {
+      const i = p * 4;
+      const d = Math.min(pixels[i], pixels[i + 1], pixels[i + 2]);
+      dark[p] = d;
+    }
+    const darkStride = Math.max(1, Math.floor(count / 450000));
+    let darkSamples = 0;
+    for (let p = 0; p < count; p += darkStride) {
+      darkHist[dark[p]]++;
+      darkSamples++;
+    }
+    const candidateFloor = percentile(darkHist, darkSamples, 0.997);
+    let airR = 235, airG = 235, airB = 235, airLum = -1;
+    for (let p = 0; p < count; p += darkStride) {
+      if (dark[p] < candidateFloor) continue;
+      const i = p * 4;
+      const y = 0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2];
+      if (y > airLum) {
+        airLum = y;
+        airR = Math.max(120, pixels[i]);
+        airG = Math.max(120, pixels[i + 1]);
+        airB = Math.max(120, pixels[i + 2]);
+      }
+    }
+
+    // Normalize dark channel by the estimated airlight, then erode it with a
+    // separable sliding-window minimum filter. This avoids a costly O(radius²)
+    // neighbourhood loop and works on both HTMLCanvas and OffscreenCanvas.
+    for (let p = 0; p < count; p++) {
+      const i = p * 4;
+      dark[p] = Math.max(0, Math.min(255, Math.round(255 * Math.min(
+        pixels[i] / airR, pixels[i + 1] / airG, pixels[i + 2] / airB
+      ))));
+    }
+    const radius = Math.max(3, Math.min(11, Math.round(Math.min(w, h) / 190)));
+    const horizontal = new Uint8Array(count);
+    const deque = new Int32Array(Math.max(w, h));
+
+    for (let y = 0; y < h; y++) {
+      const row = y * w;
+      let head = 0, tail = 0, next = 0;
+      for (let x = 0; x < w; x++) {
+        const right = Math.min(w - 1, x + radius);
+        while (next <= right) {
+          const value = dark[row + next];
+          while (tail > head && dark[row + deque[tail - 1]] >= value) tail--;
+          deque[tail++] = next++;
+        }
+        const left = Math.max(0, x - radius);
+        while (tail > head && deque[head] < left) head++;
+        horizontal[row + x] = dark[row + deque[head]];
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let head = 0, tail = 0, next = 0;
+      for (let y = 0; y < h; y++) {
+        const bottom = Math.min(h - 1, y + radius);
+        while (next <= bottom) {
+          const value = horizontal[next * w + x];
+          while (tail > head && horizontal[deque[tail - 1] * w + x] >= value) tail--;
+          deque[tail++] = next++;
+        }
+        const top = Math.max(0, y - radius);
+        while (tail > head && deque[head] < top) head++;
+        dark[y * w + x] = horizontal[deque[head] * w + x];
+      }
+    }
+
+    const hazeFlatness = Math.max(0, Math.min(1, (210 - dynamicRange) / 130));
+    const airlightScore = Math.max(0, Math.min(1, (airLum - 160) / 85));
+    const hazeScore = hazeFlatness * airlightScore;
+    // Do not apply dehazing/contrast stretching to a dark photo just because its
+    // tonal range is narrow: require a credible bright atmospheric veil as well.
+    const dehazeMix = amount * 0.90 * hazeScore;
+    const stretchMix = dynamicRange < 18 ? 0 : amount * Math.min(0.75, Math.max(0, (188 - dynamicRange) / 125)) * hazeScore;
+    const stretchRange = Math.max(35, p98 - p02);
+    const lowLight = Math.max(0, Math.min(1, (0.49 - p50 / 255) / 0.43));
+    const exposure = Math.pow(2, lowLight * 0.65 * amount);
+    const contrast = 1 + 0.18 * amount;
+    const shadowLift = 0.15 * amount;
+    const highlightRecovery = 0.19 * amount;
+    const saturation = 1 + 0.10 * amount;
+    const transmissionFloor = 0.24;
+
+    // Recover atmospheric contrast and colour, then perform adaptive tonal work.
+    for (let p = 0; p < count; p++) {
+      const i = p * 4;
+      const oldR = pixels[i], oldG = pixels[i + 1], oldB = pixels[i + 2];
+      let r = oldR, g = oldG, b = oldB;
+      const transmission = Math.max(transmissionFloor, 1 - 0.94 * (dark[p] / 255));
+      if (dehazeMix > 0) {
+        const dr = Math.max(0, Math.min(255, airR + (oldR - airR) / transmission));
+        const dg = Math.max(0, Math.min(255, airG + (oldG - airG) / transmission));
+        const db = Math.max(0, Math.min(255, airB + (oldB - airB) / transmission));
+        r += (dr - r) * dehazeMix;
+        g += (dg - g) * dehazeMix;
+        b += (db - b) * dehazeMix;
+      }
+      let lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      if (stretchMix > 0) {
+        const stretched = Math.max(0, Math.min(255, (lum - p02) * 255 / stretchRange));
+        const mapped = lum + (stretched - lum) * stretchMix;
+        const gain = lum > 1 ? mapped / lum : 1;
+        r *= gain; g *= gain; b *= gain;
+        lum = mapped;
+      }
+      const y = lum / 255;
+      const shadow = shadowLift * Math.pow(1 - y, 2.1);
+      const highlight = highlightRecovery * Math.pow(Math.max(0, (y - 0.60) / 0.40), 2);
+      let targetLum = y * exposure + shadow + 0.012 * amount - highlight;
+      targetLum = (targetLum - 0.5) * contrast + 0.5;
+      targetLum = Math.max(0, Math.min(1, targetLum));
+      const target = targetLum * 255;
+      const toneGain = lum > 1 ? target / lum : 1;
+      r *= toneGain; g *= toneGain; b *= toneGain;
+      const newLum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      r = newLum + (r - newLum) * saturation;
+      g = newLum + (g - newLum) * saturation;
+      b = newLum + (b - newLum) * saturation;
+      pixels[i] = r; pixels[i + 1] = g; pixels[i + 2] = b;
+    }
+    ctx.putImageData(image, 0, 0);
+
+    // Real Gaussian unsharp masking: subtract a blurred copy from the enhanced
+    // image and add the high-frequency detail back. Operates on luminance only
+    // to avoid coloured edge halos; a small threshold avoids amplifying noise.
+    let blurCanvas = null;
+    try {
+      blurCanvas = (typeof OffscreenCanvas !== 'undefined')
+        ? new OffscreenCanvas(w, h)
+        : document.createElement('canvas');
+      blurCanvas.width = w; blurCanvas.height = h;
+      const blurCtx = blurCanvas.getContext('2d', { willReadFrequently: true });
+      let blurData;
+      if ('filter' in blurCtx) {
+        blurCtx.filter = 'blur(' + (1.25 + 0.9 * amount).toFixed(2) + 'px)';
+        blurCtx.drawImage(canvas, 0, 0);
+        blurCtx.filter = 'none';
+        blurData = blurCtx.getImageData(0, 0, w, h).data;
+      } else {
+        // Compatibility fallback: a 3x3 Gaussian kernel.
+        const sourceData = pixels;
+        blurData = new Uint8ClampedArray(sourceData.length);
+        const weights = [1, 2, 1, 2, 4, 2, 1, 2, 1];
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          for (let c = 0; c < 3; c++) {
+            let sum = 0, k = 0;
+            for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+              const sx = Math.max(0, Math.min(w - 1, x + ox));
+              const sy = Math.max(0, Math.min(h - 1, y + oy));
+              sum += sourceData[(sy * w + sx) * 4 + c] * weights[k++];
+            }
+            blurData[i + c] = sum / 16;
+          }
+          blurData[i + 3] = sourceData[i + 3];
+        }
+      }
+      const sharpen = 1.05 * amount;
+      for (let p = 0; p < count; p++) {
+        const i = p * 4;
+        const lum = 0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2];
+        const blurLum = 0.2126 * blurData[i] + 0.7152 * blurData[i + 1] + 0.0722 * blurData[i + 2];
+        let detail = lum - blurLum;
+        if (Math.abs(detail) < 2.2) detail = 0;
+        const boost = detail * sharpen;
+        pixels[i] += boost;
+        pixels[i + 1] += boost;
+        pixels[i + 2] += boost;
+      }
+      ctx.putImageData(image, 0, 0);
+    } finally {
+      if (blurCanvas) { blurCanvas.width = 0; blurCanvas.height = 0; }
+    }
+    return canvas;
+  }
+
+  /* Crops / corrects perspective, then enhances and draws annotations. Returns a canvas of size t. */
   function renderEdited(source, sw, sh, t, edit, makeCanvas) {
     const out = makeCanvas(t.w, t.h);
     const ctx = out.getContext('2d');
@@ -3526,6 +3753,7 @@
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(source, 0, 0, t.w, t.h);
     }
+    if (edit && edit.enhance > 0) applyAutoEnhance(out, edit.enhance);
     if (edit && edit.annos && edit.annos.length) {
       // Loupes magnify the clean picture, so keep a copy from before anything is drawn on it.
       let snap = null;
@@ -3548,8 +3776,8 @@
   /* What gets sent to the converter: null when the photo has no edit. */
   function exportEdit(fileObj) {
     const e = fileObj.edit;
-    if (!e || (!e.quad && !(e.annos && e.annos.length))) return null;
-    return { quad: e.quad || null, annos: e.annos || [] };
+    if (!e || (!e.quad && !(e.annos && e.annos.length) && !(e.enhance > 0))) return null;
+    return { quad: e.quad || null, annos: e.annos || [], enhance: e.enhance || 0 };
   }
 
   /* Keeps the original thumbnail so Reset can bring it back. */
@@ -3638,6 +3866,7 @@
     if (fileObj.editedBadge) fileObj.editedBadge.classList.toggle('on', on);
     if (!fileObj.img) return;
     if (!on) {
+	  if (fileObj.editThumbUrl) { URL.revokeObjectURL(fileObj.editThumbUrl); fileObj.editThumbUrl = null; }
       if (fileObj.baseThumb) fileObj.img.src = fileObj.baseThumb;
       return;
     }
@@ -3877,6 +4106,8 @@
   const edCanvas = document.getElementById('edCanvas');
   const edCtx = edCanvas.getContext('2d');
   const edTitle = document.getElementById('edTitle');
+  const edEnhanceInput = document.getElementById('edEnhance');
+  const edEnhanceVal = document.getElementById('edEnhanceVal');
   const edAngleInput = document.getElementById('edAngle');
   const edAngleVal = document.getElementById('edAngleVal');
   const edToolsCrop = document.getElementById('edToolsCrop');
@@ -3893,7 +4124,8 @@
   const clamp01 = (n) => Math.min(1, Math.max(0, n));
 
   const ED = {
-    token: 0, file: null, bmp: null, srcBmp: null, bw: 0, bh: 0, tab: 'crop',
+    token: 0, file: null, bmp: null, srcBmp: null, previewBmp: null, bw: 0, bh: 0, tab: 'crop',
+    enhance: 0,
     base: fullQuad(), angle: 0, rot: 0,          // rot: quarter turns clockwise (bmp is the turned copy of srcBmp)
     redo: [], redoKey: '',
     annos: [], sel: -1,
@@ -3903,6 +4135,39 @@
     rect: { x: 0, y: 0, w: 1, h: 1 }, cw: 1, ch: 1, dpr: 1,
     drag: null, temp: null
   };
+
+  function edClearEnhancePreview() {
+    if (ED.previewBmp) {
+      ED.previewBmp.width = 0;
+      ED.previewBmp.height = 0;
+      ED.previewBmp = null;
+    }
+  }
+
+  function edRefreshEnhancePreview() {
+    edClearEnhancePreview();
+    if (!ED.bmp || !ED.enhance) return;
+    // The interactive preview only needs screen resolution; keep the full-resolution
+    // original untouched for export, and cap slider work to keep dragging responsive.
+    const scale = Math.min(1, 1400 / Math.max(ED.bw, ED.bh));
+    const pw = Math.max(1, Math.round(ED.bw * scale));
+    const ph = Math.max(1, Math.round(ED.bh * scale));
+    const c = makeMainCanvas(pw, ph);
+    c.getContext('2d').drawImage(ED.bmp, 0, 0, pw, ph);
+    ED.previewBmp = applyAutoEnhance(c, ED.enhance);
+  }
+
+  function edSetEnhance(value, redraw = true) {
+    ED.enhance = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    edEnhanceInput.value = String(ED.enhance);
+    edEnhanceVal.textContent = ED.enhance ? ED.enhance + '%' : 'Off';
+    edRefreshEnhancePreview();
+    ED.baseCanvas = null;
+    ED.baseKey = '';
+    if (redraw) edRender();
+  }
+
+  edEnhanceInput.addEventListener('change', () => edSetEnhance(edEnhanceInput.value));
 
   /* Rotate a 0..1 point about the photo centre, measured in real pixels so shapes stay square. */
   function edRot(p, rad) {
@@ -3932,9 +4197,14 @@
   }
 
   function edApplyRot() {
+    edClearEnhancePreview();
     if (ED.bmp && ED.bmp !== ED.srcBmp) { ED.bmp.width = 0; ED.bmp.height = 0; }
     const s = ED.srcBmp, k = ED.rot % 4;
-    if (!k) { ED.bmp = s; ED.bw = s.width; ED.bh = s.height; return; }
+    if (!k) {
+      ED.bmp = s; ED.bw = s.width; ED.bh = s.height;
+      edRefreshEnhancePreview();
+      return;
+    }
     const odd = k % 2 === 1;
     const c = makeMainCanvas(odd ? s.height : s.width, odd ? s.width : s.height);
     const ctx = c.getContext('2d');
@@ -3944,6 +4214,7 @@
     ctx.rotate(k * Math.PI / 2);
     ctx.drawImage(s, -s.width / 2, -s.height / 2);
     ED.bmp = c; ED.bw = c.width; ED.bh = c.height;
+    edRefreshEnhancePreview();
   }
 
   /* Rejects shapes that fold over themselves or collapse. */
@@ -4147,7 +4418,9 @@
     const cropDirty = !edIsFull() || ED.rot !== 0;
     const n = edAnnoCount();
     document.getElementById('edFull').disabled = !cropDirty;
-    document.getElementById('edResetAll').disabled = !cropDirty && n === 0;
+    // Enhancement is an independent edit too, so Reset All must remain available
+    // when it is the only change made to an otherwise untouched photo.
+    document.getElementById('edResetAll').disabled = !cropDirty && n === 0 && !(ED.enhance > 0);
     edClearBtn.disabled = n === 0;
   }
 
@@ -4202,7 +4475,7 @@
     ctx.save();
     ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
     ctx.rotate(ED.angle * Math.PI / 180);
-    ctx.drawImage(ED.bmp, -r.w / 2, -r.h / 2, r.w, r.h);
+    ctx.drawImage(ED.previewBmp || ED.bmp, -r.w / 2, -r.h / 2, r.w, r.h);
     ctx.restore();
   }
 
@@ -4339,9 +4612,10 @@
 
   /* The cropped picture that annotations are drawn on (at most 1600 px). */
   function edBuildBase() {
-    const key = edQuadKey();
+    const key = edQuadKey() + '|enhance:' + ED.enhance;
     if (ED.baseCanvas && ED.baseKey === key) return;
-    const edit = edIsFull() ? null : { quad: edQuad() };
+    const quad = edIsFull() ? null : edQuad();
+    const edit = (quad || ED.enhance) ? { quad: quad, enhance: ED.enhance } : null;
     const cd = cropDims(ED.bw, ED.bh, edit);
     const k = Math.min(1, 1600 / Math.max(cd.w, cd.h));
     const t = { w: Math.max(1, Math.round(cd.w * k)), h: Math.max(1, Math.round(cd.h * k)) };
@@ -5045,8 +5319,9 @@
   });
 
   document.getElementById('edResetAll').addEventListener('click', () => {
-    if (!confirm('Reset the crop, straighten and rotation, and remove all annotations?')) return;
+    if (!confirm('Reset crop, straighten, rotation and auto enhancement, and remove all annotations?')) return;
     edResetCrop();
+    edSetEnhance(0, false);
     ED.annos = [];
     ED.annosP = [];
     ED.visIds = new Set();
@@ -5259,6 +5534,10 @@
     ED.file = f;
     ED.bmp = null;
     ED.srcBmp = null;
+    ED.previewBmp = null;
+    ED.enhance = 0;
+    edEnhanceInput.value = '0';
+    edEnhanceVal.textContent = 'Off';
     ED.rot = 0;
     ED.tab = 'crop';
     ED.drag = null; ED.temp = null;
@@ -5286,6 +5565,9 @@
     const e = f.edit;
     ED.srcBmp = bmp;
     ED.bmp = null;
+    ED.enhance = Math.max(0, Math.min(100, Math.round((e && e.enhance) || 0)));
+    edEnhanceInput.value = String(ED.enhance);
+    edEnhanceVal.textContent = ED.enhance ? ED.enhance + '%' : 'Off';
     ED.rot = (e && e.ui && e.ui.rot) || 0;
     edApplyRot();
     if (e && e.ui) {
@@ -5314,6 +5596,7 @@
     const turned = ED.bmp && ED.bmp !== ED.srcBmp ? ED.bmp : null;
     if (ED.srcBmp) ED.srcBmp.close();
     if (turned) { turned.width = 0; turned.height = 0; }
+    edClearEnhancePreview();
     ED.bmp = null;
     ED.srcBmp = null;
     ED.baseCanvas = null;
@@ -5333,14 +5616,15 @@
     if (ED.tab === 'anno') { edAnnosStore(); }
     const quad = (edIsFull() && !ED.rot) ? null : edQuad().map(p => edToSrc(p, ED.rot));
     const annos = edAnnosToCrop(ED.annosP, edQuad());      // crop space, for the converter
-    if (!quad && !annos.length) {
+    if (!quad && !annos.length && !ED.enhance) {
       ED.file.edit = null;
     } else {
       ED.file.edit = {
         quad: quad,
         ui: { base: ED.base.map(p => ({ x: p.x, y: p.y })), angle: ED.angle, rot: ED.rot,
               annosP: ED.annosP.map(a => Object.assign({}, a)) },
-        annos: annos
+        annos: annos,
+        enhance: ED.enhance
       };
     }
     closeEditor(true);
