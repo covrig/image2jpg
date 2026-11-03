@@ -2,7 +2,7 @@
 
 A client-side, single-page web app that batch-converts images (HEIC, JPEG, PNG, WebP, GIF, AVIF and more) to JPG with resizing and quality control. All processing happens locally in the browser - no image ever leaves the device.
 
-<img width="2133" height="1159" alt="image" src="https://github.com/user-attachments/assets/7f0f7d72-7853-43ec-a676-6d6c82c6f9aa" />
+<img width="1279" height="695" alt="image" src="https://github.com/user-attachments/assets/22c8686f-8238-4dc9-862d-3f2aefe685d2" />
 
 ## Features
 
