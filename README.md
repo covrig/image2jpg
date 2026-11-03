@@ -8,7 +8,6 @@ A client-side, single-page web app that batch-converts images (HEIC, JPEG, PNG, 
 
 - **Batch conversion** — select or drag & drop multiple images
 - **HEIC / HEIF support** 
-- **True format detection** from file bytes, not the extension or MIME type, so a JPEG saved as `.heic` (or vice versa) is still handled correctly
 - **Scale presets** — 1080p / 720p box fit, or 25 / 50 / 75 / 100 % 
 - **JPEG quality**
 - **Built-in editor** — crop with draggable corners, autocrop, straighten slider (−45° to +45°), perspective correction, plus annotations: arrow, circle, rectangle, loupe and text
