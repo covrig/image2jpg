@@ -2,13 +2,13 @@
 
 A client-side, single-page web app that batch-converts images (HEIC, JPEG, PNG, WebP, GIF, AVIF and more) to JPG with resizing and quality control. 
 
-**All processing happens locally in the browser - no image ever leaves the device.**
 
 <img width="1279" height="695" alt="image" src="https://github.com/user-attachments/assets/22c8686f-8238-4dc9-862d-3f2aefe685d2" />
 
 ## Features
 
 - **Batch conversion** - select or drag & drop multiple images
+- **All processing happens locally in the browser** - no image ever leaves the device
 - **HEIC / HEIF support** 
 - **Scale presets** - 1080p / 720p box fit, or 25 / 50 / 75 / 100 % 
 - **JPEG quality**
