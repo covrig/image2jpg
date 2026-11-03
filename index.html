@@ -35,7 +35,6 @@
       --text-sub: #8e8e93;
       --text-faint: #636366;
       --border-color: #2c2c2e;
-      --bar-bg: rgba(0, 0, 0, 0.92);
       --overlay-bg: rgba(0, 0, 0, 0.85);
       --track-bg: #2c2c2e;
       --field-bg: #0c0c0e;
@@ -60,7 +59,6 @@
       --text-sub: #6e6e73;
       --text-faint: #8a8a8f;
       --border-color: #d5d5dc;
-      --bar-bg: rgba(255, 255, 255, 0.93);
       --overlay-bg: rgba(242, 242, 247, 0.9);
       --track-bg: #dcdce2;
       --field-bg: #f2f2f7;
@@ -81,7 +79,7 @@
     body {
       background-color: var(--bg-color);
       color: var(--text-main);
-      padding: calc(12px + env(safe-area-inset-top)) 12px calc(100px + env(safe-area-inset-bottom)) 12px;
+      padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom)) 12px;
       max-width: 520px;
       margin: 0 auto;
       position: relative;
@@ -250,14 +248,6 @@
       transition: max-height 0.2s ease, min-height 0.2s ease;
     }
 
-    /* Larger height for Desktop / Wide screens */
-    @media (min-width: 520px) {
-      .thumb-grid-container {
-        min-height: 742px;
-        max-height: 742px;
-      }
-    }
-
 	/* ---- Flexible mobile preview layout ---- */
 	@media (max-width: 899px) {
 
@@ -293,23 +283,6 @@
 			max-height: none;
 		}
 
-		/* Action bar participates in the layout instead of overlapping */
-		.action-bar {
-			position: static;
-			transform: none;
-			left: auto;
-			bottom: auto;
-
-			flex: 0 0 auto;
-
-			width: calc(100% + 24px);
-			max-width: none;
-			margin: 0 -12px;
-
-			padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-
-			z-index: auto;
-		}
 	}
 
     .empty-state {
@@ -407,25 +380,16 @@
       transform: scale(1.08);
     }
 
-	/* Action bar stays at the bottom and centred */
-	.action-bar {
-		position: static;
-		transform: none;
-		left: auto;
-		bottom: auto;
-
-		flex: 0 0 auto;
-		align-self: center;
-
-		width: calc(100% + 24px);
-		max-width: 520px;
-		margin: 0 -12px;
-
-		padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-
-		box-sizing: border-box;
-		z-index: auto;
-	}
+    /* In-flow action bar: mobile flex layout and compact tablet layout. */
+    .action-bar {
+      flex: 0 0 auto;
+      align-self: center;
+      width: calc(100% + 24px);
+      max-width: 520px;
+      margin: 0 -12px;
+      padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+      box-sizing: border-box;
+    }
 
     .action-grid {
       display: grid;
@@ -1043,17 +1007,13 @@
 
       /* Action buttons sit in the left column instead of a fixed bottom bar */
       .action-bar {
-        position: static;
         grid-column: 1;
         grid-row: 4;
-        transform: none;
+        align-self: stretch;
         width: auto;
         max-width: none;
+        margin: 0;
         padding: 0;
-        background: transparent;
-        border-top: none;
-        backdrop-filter: none;
-        z-index: auto;
       }
       .btn-action { padding: 18px; font-size: 16px; }
       .action-grid .btn-action { padding: 18px 8px; font-size: 15px; }
@@ -1104,7 +1064,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.2</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.3</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1137,7 +1097,7 @@
             <option value="p25">25%</option>
             <option value="p50" selected>50%</option>
             <option value="p75">75%</option>
-            <option value="p90">90%</option>
+            <option value="p100">100%</option>
           </optgroup>
         </select>
       </div>
@@ -1567,7 +1527,7 @@
     b720:  { long: 1280, short: 720,  tag: '720p' }
   };
 
-  function applySizeChoice() {
+  function applySizeChoice(shouldInvalidate = true) {
     const v = sizeSelect.value;
     if (BOX_PRESETS[v]) {
       scaleMode = 'box';
@@ -1579,27 +1539,25 @@
       scaleMode = 'percent';
       currentScale = (isFinite(pct) && pct > 0 ? pct : 50) / 100;
     }
-    invalidateProcessedCache();
+    if (shouldInvalidate) invalidateProcessedCache();
   }
 
-  function applyQualityChoice() {
+  function applyQualityChoice(shouldInvalidate = true) {
     const q = parseInt(qualitySelect.value, 10);
     currentQuality = (isFinite(q) && q >= 1 && q <= 100 ? q : 80) / 100;
-    invalidateProcessedCache();
+    if (shouldInvalidate) invalidateProcessedCache();
   }
 
-  /* Works out the output size for one image. */
-  function computeTarget(width, height) {
+  /* Pure sizing calculation; the same function is injected into Web Workers. */
+  function computeTarget(width, height, settings) {
     let factor;
-    if (scaleMode === 'box') {
-      // 1080p / 720p: fit inside the box, whichever way the photo is turned.
-      // Capped at 1, so a smaller image is never enlarged.
+    if (settings.scaleMode === 'box') {
       const landscape = width >= height;
-      const bw = landscape ? boxLong : boxShort;
-      const bh = landscape ? boxShort : boxLong;
+      const bw = landscape ? settings.boxLong : settings.boxShort;
+      const bh = landscape ? settings.boxShort : settings.boxLong;
       factor = Math.min(1, bw / width, bh / height);
     } else {
-      factor = currentScale;
+      factor = settings.scale;
     }
     return {
       w: Math.max(1, Math.round(width * factor)),
@@ -1920,11 +1878,88 @@
     return (file.type && file.type.startsWith('image/')) || IMAGE_EXT_RE.test(file.name);
   }
 
-  /* A complete JPEG ends with FF D9 (zero padding after it is allowed). */
-  function jpegIsComplete(bytes) {
-    let i = bytes.length - 1;
-    while (i > 1 && bytes[i] === 0) i--;
-    return bytes[i - 1] === 0xFF && bytes[i] === 0xD9;
+  /*
+   * Find a real JPEG EOI marker, not merely the final two bytes. JPEG trailers
+   * (for example Motion Photo video data) may follow EOI. Segment payloads are
+   * skipped, and entropy-coded data honours byte-stuffing and restart markers,
+   * so an incidental FF D9 inside EXIF or compressed data is not mistaken for EOI.
+   */
+  function jpegHasEOI(bytes) {
+    if (!bytes || bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return false;
+    let i = 2;
+    let inScan = false;
+
+    while (i < bytes.length) {
+      if (inScan) {
+        let foundMarker = false;
+        while (i < bytes.length) {
+          if (bytes[i] !== 0xFF) { i++; continue; }
+          const markerStart = i;
+          while (i < bytes.length && bytes[i] === 0xFF) i++;
+          if (i >= bytes.length) return false;
+          const marker = bytes[i++];
+          if (marker === 0x00 || (marker >= 0xD0 && marker <= 0xD7)) continue;
+          if (marker === 0xD9) return true;
+          // Another marker ends this scan; let the outer marker parser handle it.
+          i = markerStart;
+          inScan = false;
+          foundMarker = true;
+          break;
+        }
+        if (!foundMarker) return false;
+      }
+
+      if (bytes[i] !== 0xFF) { i++; continue; }
+      while (i < bytes.length && bytes[i] === 0xFF) i++;
+      if (i >= bytes.length) return false;
+      const marker = bytes[i++];
+      if (marker === 0xD9) return true;
+      if (marker === 0x00) continue;
+      if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) continue;
+      if (i + 2 > bytes.length) return false;
+      const segmentLength = (bytes[i] << 8) | bytes[i + 1];
+      if (segmentLength < 2 || i + segmentLength > bytes.length) return false;
+      i += segmentLength;
+      if (marker === 0xDA) inScan = true;
+    }
+    return false;
+  }
+
+  async function prepareJpegSource(buffer, mime) {
+    const bytes = new Uint8Array(buffer);
+    let source = new Blob([buffer], { type: mime || 'image/jpeg' });
+    const missingEOI = !jpegHasEOI(bytes);
+    let patched = false;
+    let originalDecoded = false;
+
+    if (missingEOI) {
+      // Always try the untouched JPEG first. Some browsers recover a truncated
+      // JPEG without an EOI marker; record that fact, but do not modify its bytes.
+      try {
+        const bitmap = await bitmapFromBlob(source);
+        originalDecoded = true;
+        if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+      } catch (err) {
+        // Only attempt the EOI repair after the original fails to decode.
+      }
+
+      if (!originalDecoded) {
+        const fixed = new Uint8Array(bytes.length + 2);
+        fixed.set(bytes);
+        fixed[bytes.length] = 0xFF;
+        fixed[bytes.length + 1] = 0xD9;
+        const candidate = new Blob([fixed], { type: mime || 'image/jpeg' });
+        try {
+          const bitmap = await bitmapFromBlob(candidate);
+          if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+          source = candidate;
+          patched = true;
+        } catch (err) {
+          // Preserve the source unchanged; conversion will report the real decode failure.
+        }
+      }
+    }
+    return { source, missingEOI, originalDecoded, patched };
   }
 
   /* createImageBitmap is the strictest decoder; if it refuses, let an <img> element try. */
@@ -1955,6 +1990,16 @@
     const sniffed = buffers.map(buf =>
       buf ? sniffBytes(new Uint8Array(buf, 0, Math.min(512, buf.byteLength))) : { kind: 'unknown', mime: '' });
 
+    // Probe only JPEGs without a terminal EOI. Decode the original first so trailer-bearing
+    // files (including Motion Photos) remain byte-for-byte unchanged when the browser accepts them.
+    const preparedJpegs = new Array(incoming.length);
+    for (let k = 0; k < incoming.length; k++) {
+      const buf = buffers[k];
+      if (buf && sniffed[k].kind === 'jpeg') {
+        preparedJpegs[k] = await prepareJpegSource(buf, sniffed[k].mime || incoming[k].type);
+      }
+    }
+
     let added = 0;
     incoming.forEach((rawFile, k) => {
       const duplicate = selectedFiles.some(f =>
@@ -1973,20 +2018,13 @@
       const note = (s.kind !== 'unknown' && declared && declared !== s.kind)
         ? `Actually ${KIND_LABEL[s.kind]}, not ${KIND_LABEL[declared]}` : '';
 
-      // In-memory copy with a MIME type that matches the real content.
-      // (Falls back to the original handle only if the early read failed.)
-      let buf = buffers[k];
-      let patched = false;
-      if (buf && s.kind === 'jpeg' && !jpegIsComplete(new Uint8Array(buf))) {
-        // Truncated JPEG: add the missing End Of Image marker so strict decoders accept it.
-        const fixed = new Uint8Array(buf.byteLength + 2);
-        fixed.set(new Uint8Array(buf));
-        fixed[buf.byteLength] = 0xFF;
-        fixed[buf.byteLength + 1] = 0xD9;
-        buf = fixed.buffer;
-        patched = true;
-      }
-      const src = buf ? new Blob([buf], { type: type || '' }) : rawFile;
+      // Keep a verified repair, otherwise use the original in-memory copy.
+      const prepared = preparedJpegs[k];
+      const buf = buffers[k];
+      const missingEOI = !!(prepared && prepared.missingEOI);
+      const patched = !!(prepared && prepared.patched);
+      const decodedWithoutRepair = !!(prepared && prepared.originalDecoded);
+      const src = prepared ? prepared.source : (buf ? new Blob([buf], { type: type || '' }) : rawFile);
       buffers[k] = null;
 
       const fileObj = {
@@ -1997,7 +2035,16 @@
         file: rawFile,
         src: src,
         kind: s.kind,
-        note: patched ? 'Incomplete file: the bottom part is missing' : note,
+        note: [
+          note,
+          missingEOI ? (patched
+            ? 'JPEG was missing its end-of-image marker; appending it restored decoding.'
+            : (decodedWithoutRepair
+              ? 'JPEG is missing its end-of-image marker. The browser decoded it without repair; the image may be incomplete.'
+              : 'JPEG is missing its end-of-image marker and could not be decoded, even after a repair attempt.')) : ''
+        ].filter(Boolean).join(' · '),
+        jpegMissingEOI: missingEOI,
+        jpegDecodedWithoutRepair: decodedWithoutRepair,
         patchedOnLoad: patched,
         isHeic: isHeic
       };
@@ -2171,7 +2218,7 @@
   }
 
   /* Clears the queue but keeps the user's size, format and naming choices. */
-  function clearSelection() {
+  function clearSelection(shouldInvalidate = true) {
     clearOldThumbUrls();
     selectedFiles = [];
     processedFilesCache = [];
@@ -2181,17 +2228,18 @@
     thumbGrid.innerHTML = '';
     sizeStats.innerHTML = '';
     updateSelectionUI();
-    invalidateProcessedCache();
+    if (shouldInvalidate) invalidateProcessedCache();
     updateNamePreview();
   }
 
-  /* Full reset, including the size and format controls. */
+  /* Full reset, including the size and format controls; invalidate once after batching. */
   function resetApp() {
-    clearSelection();
+    clearSelection(false);
     sizeSelect.value = 'p50';
     qualitySelect.value = '80';
-    applySizeChoice();
-    applyQualityChoice();
+    applySizeChoice(false);
+    applyQualityChoice(false);
+    invalidateProcessedCache();
   }
 
   function clearOldThumbUrls() {
@@ -2290,32 +2338,28 @@
     return canvas;
   }
 
-  async function decodeHeicForThumbnail(buffer, targetSize = 240) {
+  async function decodeHeicBufferToCanvas(buffer, options = {}) {
     const heif = await getHeifModule();
-    const decoder = new heif.HeifDecoder();
-    const images = decoder.decode(new Uint8Array(buffer));
+    const images = new heif.HeifDecoder().decode(new Uint8Array(buffer));
     if (!images || !images.length) throw new Error('Could not decode HEIC image.');
 
     const primaryImage = images[0];
     let imageToDisplay = primaryImage;
     let isThumbnail = false;
-
-    try {
-      if (typeof primaryImage.get_thumbnails === 'function') {
+    if (options.preferThumbnail && typeof primaryImage.get_thumbnails === 'function') {
+      try {
         const thumbs = primaryImage.get_thumbnails();
-        if (thumbs && thumbs.length > 0) {
+        if (thumbs && thumbs.length) {
           imageToDisplay = thumbs[0];
           isThumbnail = true;
         }
+      } catch (err) {
+        // Decode the primary image when the embedded thumbnail is unavailable.
       }
-    } catch (e) {
-      imageToDisplay = primaryImage;
-      isThumbnail = false;
     }
 
     const width = imageToDisplay.get_width();
     const height = imageToDisplay.get_height();
-
     const raw = document.createElement('canvas');
     raw.width = width;
     raw.height = height;
@@ -2328,59 +2372,47 @@
       freeImage(primaryImage);
       for (let i = 1; i < images.length; i++) freeImage(images[i]);
     } catch (err) {
+      // A timed-out libheif decode may still be running, so its WASM objects must remain alive.
       if (!err || !err.isTimeout) {
         if (isThumbnail) freeImage(imageToDisplay);
         freeImage(primaryImage);
         for (let i = 1; i < images.length; i++) freeImage(images[i]);
       }
+      raw.width = 0;
+      raw.height = 0;
       throw err;
     }
 
     ctx.putImageData(imageData, 0, 0);
-
-    let tw = width, th = height;
-    if (width > targetSize || height > targetSize) {
-      const s = Math.min(targetSize / width, targetSize / height);
-      tw = Math.max(1, Math.round(width * s));
-      th = Math.max(1, Math.round(height * s));
+    const maxSize = Number(options.maxSize) || 0;
+    if (maxSize > 0 && (width > maxSize || height > maxSize)) {
+      const scale = Math.min(maxSize / width, maxSize / height);
+      const scaled = paintToCanvas(
+        raw,
+        Math.max(1, Math.round(width * scale)),
+        Math.max(1, Math.round(height * scale)),
+        options.opaque !== false
+      );
+      raw.width = 0;
+      raw.height = 0;
+      return { canvas: scaled, width: scaled.width, height: scaled.height };
     }
-
-    // Composited onto white: the preview is encoded as JPEG.
-    const out = paintToCanvas(raw, tw, th, true);
-    raw.width = 0; raw.height = 0;
-    return out;
+    if (options.opaque) {
+      const opaque = paintToCanvas(raw, width, height, true);
+      raw.width = 0;
+      raw.height = 0;
+      return { canvas: opaque, width, height };
+    }
+    return { canvas: raw, width, height };
   }
 
-  async function decodeHeicBufferToCanvas(buffer) {
-    const heif = await getHeifModule();
-    const decoder = new heif.HeifDecoder();
-    const images = decoder.decode(new Uint8Array(buffer));
-    if (!images || !images.length) throw new Error('Could not decode HEIC image.');
-
-    const image = images[0];
-    const width = image.get_width();
-    const height = image.get_height();
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.createImageData(width, height);
-
-    try {
-      await heifDisplay(image, imageData);
-      freeImage(image);
-      for (let i = 1; i < images.length; i++) freeImage(images[i]);
-    } catch (err) {
-      if (!err || !err.isTimeout) {
-        freeImage(image);
-        for (let i = 1; i < images.length; i++) freeImage(images[i]);
-      }
-      throw err;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    return { canvas, width, height };
+  async function decodeHeicForThumbnail(buffer, targetSize = 240) {
+    const decoded = await decodeHeicBufferToCanvas(buffer, {
+      preferThumbnail: true,
+      maxSize: targetSize,
+      opaque: true
+    });
+    return decoded.canvas;
   }
 
   async function mapConcurrent(items, limit, fn) {
@@ -2412,17 +2444,6 @@
   const WORKER_BODY = `
   let lib = null;
   const TIMEOUT = 30000;
-
-  function targetSize(w, h, p) {
-    let f = 1;
-    if (p.scaleMode === 'box') {
-      const land = w >= h;
-      f = Math.min(1, (land ? p.boxLong : p.boxShort) / w, (land ? p.boxShort : p.boxLong) / h);
-    } else {
-      f = p.scale;
-    }
-    return { w: Math.max(1, Math.round(w * f)), h: Math.max(1, Math.round(h * f)) };
-  }
 
   function display(im, imageData) {
     return new Promise((resolve, reject) => {
@@ -2496,7 +2517,7 @@
       }
       const edit = m.edit || null;
       const cd = cropDims(w, h, edit);
-      const t = targetSize(cd.w, cd.h, m);
+      const t = computeTarget(cd.w, cd.h, m);
       let blob;
       if (edit) {
         // crop / perspective / annotations: shared code, injected from the main script
@@ -2517,7 +2538,7 @@
   function getWorkerUrl() {
     if (!workerUrl) {
       // The edit functions are written once in this file and copied into the worker as source text.
-      const shared = [cropDims, warpQuad, edUnitToQuad, edDrawImageInQuad, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
+      const shared = [computeTarget, cropDims, quadHomography, quadMapPoint, warpQuad, edUnitToQuad, edDrawImageInQuad, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
       const src = "const LIBHEIF_URL_W = '" + LIBHEIF_URL + "';\n" + shared + "\n" + WORKER_BODY;
       workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
     }
@@ -2696,11 +2717,11 @@
     if (conversionLogHasErrors) {
       logBtn.classList.add('has-errors');
       logBtn.title = conversionLogHasWarnings
-        ? 'Errors occurred; one or more truncated JPEGs were also patched — open the log'
+        ? 'Errors occurred; one or more JPEGs were missing an end-of-image marker — open the log'
         : 'Errors occurred — open the log';
     } else if (conversionLogHasWarnings) {
       logBtn.classList.add('has-warnings');
-      logBtn.title = 'One or more truncated JPEGs were patched on load — open the log';
+      logBtn.title = 'One or more JPEGs were missing an end-of-image marker — open the log';
     } else if (conversionLogInProgress) {
       logBtn.title = 'Resize in progress — conversion log';
     } else {
@@ -2720,7 +2741,7 @@
     updateLogButton();
   }
 
-  function addConversionLogEntry(type, title, message, order) {
+  function addConversionLogEntry(type, title, message, order, metadata = {}) {
     if (type === 'error') conversionLogHasErrors = true;
     if (type === 'warning') conversionLogHasWarnings = true;
     const sequence = conversionLogSequence++;
@@ -2729,7 +2750,8 @@
       title: title || 'Log entry',
       message: message || '',
       order: Number.isFinite(order) ? order : (100000 + sequence),
-      sequence
+      sequence,
+      ...metadata
     });
     updateLogButton();
   }
@@ -2738,14 +2760,16 @@
     conversionLogList.replaceChildren();
     const successes = conversionLogEntries.filter(entry => entry.type === 'success').length;
     const errors = conversionLogEntries.filter(entry => entry.type === 'error').length;
-    const patched = conversionLogEntries.filter(entry => entry.type === 'warning').length;
+    const jpegWarnings = conversionLogEntries.filter(entry => entry.type === 'warning').length;
+    const patched = conversionLogEntries.filter(entry => entry.type === 'warning' && entry.patched).length;
 
     if (!conversionLogHasRun) {
       conversionLogSummary.textContent = 'No conversion or resize run has been recorded yet.';
     } else {
       const total = conversionLogBatchTotal;
       const parts = [`${successes} of ${total} converted`, `${errors} ${errors === 1 ? 'error' : 'errors'}`];
-      if (patched) parts.push(`${patched} JPEG${patched === 1 ? '' : 's'} patched on load`);
+      if (jpegWarnings) parts.push(`${jpegWarnings} JPEG${jpegWarnings === 1 ? '' : 's'} missing an end marker`);
+      if (patched) parts.push(`${patched} repaired`);
       conversionLogSummary.textContent = parts.join(' · ');
     }
 
@@ -2760,7 +2784,7 @@
       heading.className = 'log-item-heading';
       const level = document.createElement('span');
       level.className = 'log-level is-' + (entry.type === 'error' ? 'error' : (entry.type === 'success' ? 'success' : (entry.type === 'warning' ? 'warning' : 'info')));
-      level.textContent = entry.type === 'error' ? 'ERROR' : (entry.type === 'success' ? 'OK' : (entry.type === 'warning' ? 'PATCHED' : 'INFO'));
+      level.textContent = entry.type === 'error' ? 'ERROR' : (entry.type === 'success' ? 'OK' : (entry.type === 'warning' ? (entry.patched ? 'PATCHED' : 'WARNING') : 'INFO'));
       const name = document.createElement('div');
       name.className = 'error-dialog-name';
       name.textContent = entry.title;
@@ -2819,14 +2843,16 @@
       -1
     );
     selectedFiles.forEach((fileObj, index) => {
+      if (!fileObj.jpegMissingEOI) return;
+      let message;
       if (fileObj.patchedOnLoad) {
-        addConversionLogEntry(
-          'warning',
-          fileObj.name,
-          'Truncated JPEG patched on load by adding the missing end-of-image marker. Some image data may still be missing.',
-          index
-        );
+        message = 'The JPEG was missing its end-of-image marker. The original failed to decode; appending the marker produced a decodable file.';
+      } else if (fileObj.jpegDecodedWithoutRepair) {
+        message = 'The JPEG is missing its end-of-image marker. This browser decoded the original without repair, but the image may still be incomplete (for example, its lower part may be missing).';
+      } else {
+        message = 'The JPEG is missing its end-of-image marker. The original could not be decoded, and appending the marker did not make it decodable.';
       }
+      addConversionLogEntry('warning', fileObj.name, message, index, { patched: !!fileObj.patchedOnLoad });
     });
 
     showProgress('Resizing images…');
@@ -2857,14 +2883,15 @@
     };
 
     try {
-      /* Wipe any leftovers from a previous run so colours start from the
-         pre-conversion rule: white for HEIC, lime for everything else. */
-      selectedFiles.forEach(f => {
-        f.converted = false;
-        f.outputFile = null;
-        clearOutputThumbnail(f);
-      });
-      resetThumbBadges();
+      /* A fully failed/aborted prior run can be retried without a settings change. */
+      if (conversionHasRun) {
+        selectedFiles.forEach(f => {
+          f.converted = false;
+          f.outputFile = null;
+          clearOutputThumbnail(f);
+        });
+        resetThumbBadges();
+      }
 
       const results = new Array(total).fill(null);
       let usedWorkers = false;
@@ -3021,7 +3048,7 @@
         sw = source.width; sh = source.height;
       }
       const cd = cropDims(sw, sh, edit);
-      const target = computeTarget(cd.w, cd.h);
+      const target = computeTarget(cd.w, cd.h, { scaleMode: scaleMode, scale: currentScale, boxLong: boxLong, boxShort: boxShort });
       const out = renderEdited(source, sw, sh, target, edit, makeMainCanvas);
       if (source.close) source.close(); else { source.width = 0; source.height = 0; }
       finalBlob = await canvasToBlob(out, targetMime, currentQuality);
@@ -3029,7 +3056,7 @@
     } else if (isHeic) {
       const buffer = await fileObj.src.arrayBuffer();
       const { canvas, width, height } = await decodeHeicBufferToCanvas(buffer);
-      const target = computeTarget(width, height);
+      const target = computeTarget(width, height, { scaleMode: scaleMode, scale: currentScale, boxLong: boxLong, boxShort: boxShort });
 
       const scaled = paintToCanvas(canvas, target.w, target.h, opaque);
       finalBlob = await canvasToBlob(scaled, targetMime, currentQuality);
@@ -3038,7 +3065,7 @@
       scaled.width = 0; scaled.height = 0;
     } else {
       const probe = await bitmapFromBlob(fileObj.src);
-      const target = computeTarget(probe.width, probe.height);
+      const target = computeTarget(probe.width, probe.height, { scaleMode: scaleMode, scale: currentScale, boxLong: boxLong, boxShort: boxShort });
       probe.close();
 
       let bitmap;
@@ -3267,30 +3294,48 @@
     };
   }
 
+  /* Unit-square -> quadrilateral projective transform shared by export and editor geometry. */
+  function quadHomography(P) {
+    const dx1 = P[1].x - P[2].x, dx2 = P[3].x - P[2].x, sx = P[0].x - P[1].x + P[2].x - P[3].x;
+    const dy1 = P[1].y - P[2].y, dy2 = P[3].y - P[2].y, sy = P[0].y - P[1].y + P[2].y - P[3].y;
+    const den = dx1 * dy2 - dx2 * dy1;
+    let g = 0, h = 0;
+    if ((Math.abs(sx) > 1e-9 || Math.abs(sy) > 1e-9) && Math.abs(den) > 1e-12) {
+      g = (sx * dy2 - dx2 * sy) / den;
+      h = (dx1 * sy - sx * dy1) / den;
+    }
+    return {
+      a: P[1].x - P[0].x + g * P[1].x,
+      b: P[3].x - P[0].x + h * P[3].x,
+      c: P[0].x,
+      d: P[1].y - P[0].y + g * P[1].y,
+      e: P[3].y - P[0].y + h * P[3].y,
+      f: P[0].y,
+      g: g,
+      h: h
+    };
+  }
+
+  function quadMapPoint(m, u, v) {
+    const w = m.g * u + m.h * v + 1;
+    return {
+      x: (m.a * u + m.b * v + m.c) / w,
+      y: (m.d * u + m.e * v + m.f) / w
+    };
+  }
+
   /* Perspective warp: fills dst with the quad `pts` (pixel coords inside src), bilinear. */
   function warpQuad(src, pts, dst) {
     const sw = src.width, sh = src.height, dw = dst.width, dh = dst.height;
     const sd = src.data, od = dst.data;
-    const x0 = pts[0].x, y0 = pts[0].y, x1 = pts[1].x, y1 = pts[1].y;
-    const x2 = pts[2].x, y2 = pts[2].y, x3 = pts[3].x, y3 = pts[3].y;
-    // Unit square -> quad projective mapping (Heckbert).
-    const dx1 = x1 - x2, dx2 = x3 - x2, sx = x0 - x1 + x2 - x3;
-    const dy1 = y1 - y2, dy2 = y3 - y2, sy = y0 - y1 + y2 - y3;
-    const den = dx1 * dy2 - dx2 * dy1;
-    let g = 0, k = 0;
-    if ((Math.abs(sx) > 1e-9 || Math.abs(sy) > 1e-9) && Math.abs(den) > 1e-12) {
-      g = (sx * dy2 - dx2 * sy) / den;
-      k = (dx1 * sy - sx * dy1) / den;
-    }
-    const a = x1 - x0 + g * x1, b = x3 - x0 + k * x3, c = x0;
-    const d = y1 - y0 + g * y1, e = y3 - y0 + k * y3, f = y0;
+    const transform = quadHomography(pts);
     for (let y = 0; y < dh; y++) {
       const v = (y + 0.5) / dh;
       for (let x = 0; x < dw; x++) {
         const u = (x + 0.5) / dw;
-        const wgt = g * u + k * v + 1;
-        const X = (a * u + b * v + c) / wgt - 0.5;
-        const Y = (d * u + e * v + f) / wgt - 0.5;
+        const mapped = quadMapPoint(transform, u, v);
+        const X = mapped.x - 0.5;
+        const Y = mapped.y - 0.5;
         const o = (y * dw + x) * 4;
         if (!(X > -1 && Y > -1 && X < sw && Y < sh)) {      // outside the photo: white
           od[o] = 255; od[o + 1] = 255; od[o + 2] = 255; od[o + 3] = 255;
@@ -3320,7 +3365,8 @@
     const sw = img.width, sh = img.height;
     if (sw < 1 || sh < 1 || !quad || quad.length !== 4) return;
     const grid = 6;
-    const at = (u, v) => edUnitToQuad(quad, u, v);
+    const transform = quadHomography(quad);
+    const at = (u, v) => quadMapPoint(transform, u, v);
     function triangle(s1, s2, s3, d1, d2, d3) {
       const sx1 = s1.x, sy1 = s1.y;
       const sx2 = s2.x, sy2 = s2.y;
@@ -3895,7 +3941,7 @@
   const ED = {
     token: 0, file: null, bmp: null, srcBmp: null, bw: 0, bh: 0, tab: 'crop',
     base: fullQuad(), angle: 0, rot: 0,          // rot: quarter turns clockwise (bmp is the turned copy of srcBmp)
-    redo: [], redoKey: '',
+    undo: [], redo: [], historyKey: '',
     annos: [], sel: -1,
     annosP: [], visIds: new Set(), uid: 0,      // annosP: every annotation, in photo space (follows the picture, not the crop)
     tool: 'arrow', color: ED_COLORS[0], size: 1, loupeZoom: 2.5,
@@ -4057,39 +4103,9 @@
     return a;
   }
 
-  /* Upgrade annotations saved by earlier versions, which only stored two shape corners. */
-  function edUpgradeLegacyAnnoGeometry(list, Q, w, h) {
-    return list.map(a => {
-      if ((a.t === 'rect' || a.t === 'ellipse') && !Array.isArray(a.poly)) {
-        const crop = edAnnoMapPts(a, p => edQuadToUnit(Q, p.x, p.y));
-        const poly = edMakeShapePoly(crop, w, h);
-        if (poly) a.poly = poly.map(p => edUnitToQuad(Q, p.x, p.y));
-      } else if (a.t === 'text' && !Array.isArray(a.quad) && a.text) {
-        const crop = edAnnoMapPts(a, p => edQuadToUnit(Q, p.x, p.y));
-        const quad = edMakeTextQuad(crop, w, h);
-        a.quad = quad.map(p => edUnitToQuad(Q, p.x, p.y));
-      }
-      return a;
-    });
-  }
-
-  /* The perspective map from the unit square to the four-cornered shape P, as 3x3 matrix entries. */
-  function edHomog(P) {
-    const dx1 = P[1].x - P[2].x, dx2 = P[3].x - P[2].x, sx = P[0].x - P[1].x + P[2].x - P[3].x;
-    const dy1 = P[1].y - P[2].y, dy2 = P[3].y - P[2].y, sy = P[0].y - P[1].y + P[2].y - P[3].y;
-    const den = dx1 * dy2 - dx2 * dy1;
-    let g = 0, h = 0;
-    if ((Math.abs(sx) > 1e-9 || Math.abs(sy) > 1e-9) && Math.abs(den) > 1e-12) {
-      g = (sx * dy2 - dx2 * sy) / den;
-      h = (dx1 * sy - sx * dy1) / den;
-    }
-    return { a: P[1].x - P[0].x + g * P[1].x, b: P[3].x - P[0].x + h * P[3].x, c: P[0].x,
-             d: P[1].y - P[0].y + g * P[1].y, e: P[3].y - P[0].y + h * P[3].y, f: P[0].y, g: g, h: h };
-  }
-
-  /* Inverse of edUnitToQuad: a point of the photo -> its place (0..1) in the cropped result. */
+  /* Inverse of the shared unit-square -> quad mapping. */
   function edQuadToUnit(P, x, y) {
-    const m = edHomog(P);
+    const m = quadHomography(P);
     const X = (m.e - m.f * m.h) * x + (m.c * m.h - m.b) * y + (m.b * m.f - m.c * m.e);
     const Y = (m.f * m.g - m.d) * x + (m.a - m.c * m.g) * y + (m.c * m.d - m.a * m.f);
     const W = (m.d * m.h - m.e * m.g) * x + (m.b * m.g - m.a * m.h) * y + (m.a * m.e - m.b * m.d);
@@ -4468,9 +4484,75 @@
   const edClearBtn = document.getElementById('edClear');
   const ANNO_FS = [0.035, 0.055, 0.085, 0.115, 0.15];     // text sizes: keep in sync with drawAnnotations
 
+  function edCloneValue(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function edCaptureAnnoState() {
+    return {
+      annos: edCloneValue(ED.annos),
+      annosP: edCloneValue(ED.annosP),
+      visIds: Array.from(ED.visIds || []),
+      sel: ED.sel,
+      color: ED.color,
+      size: ED.size,
+      loupeZoom: ED.loupeZoom
+    };
+  }
+
+  function edAnnoStateKey(state) {
+    return JSON.stringify({
+      annos: state.annos,
+      annosP: state.annosP,
+      visIds: state.visIds,
+      color: state.color,
+      size: state.size,
+      loupeZoom: state.loupeZoom
+    });
+  }
+
+  function edEnsureHistoryContext() {
+    const key = ED.bmp ? edQuadKey() : '';
+    if (key !== ED.historyKey) {
+      ED.undo = [];
+      ED.redo = [];
+      ED.historyKey = key;
+    }
+  }
+
+  function edRecordAnnoChange(before) {
+    if (!before) return;
+    const after = edCaptureAnnoState();
+    if (edAnnoStateKey(before) === edAnnoStateKey(after)) return;
+    ED.undo.push(before);
+    if (ED.undo.length > 100) ED.undo.shift();
+    ED.redo = [];
+    edSyncButtons();
+  }
+
+  function edRestoreAnnoState(state) {
+    ED.annos = edCloneValue(state.annos);
+    ED.annosP = edCloneValue(state.annosP);
+    ED.visIds = new Set(state.visIds || []);
+    ED.sel = state.sel >= 0 && state.sel < ED.annos.length ? state.sel : -1;
+    ED.color = state.color;
+    ED.size = state.size;
+    ED.loupeZoom = state.loupeZoom;
+    ED.syncedAnno = null;
+    edSyncUI();
+    edRender();
+  }
+
+  function edStepHistory(from, to) {
+    edEnsureHistoryContext();
+    if (!from.length) return;
+    to.push(edCaptureAnnoState());
+    edRestoreAnnoState(from.pop());
+  }
+
   /* Shows or hides the controls that depend on the selection and the active tool. */
   function edSyncButtons() {
-    edUndoBtn.disabled = !ED.annos.length;
+    edUndoBtn.disabled = !ED.undo.length;
     edRedoBtn.disabled = !ED.redo.length;
   }
 
@@ -4495,7 +4577,6 @@
     const z = selLoupe ? (a.z > 1 ? a.z : 2.5) : ED.loupeZoom;
     edZoomInput.value = String(z);
     edZoomVal.textContent = z.toFixed(1) + '×';
-    edResizeSoon();
   }
 
   /* ---- Selecting and moving annotations ---- */
@@ -4632,13 +4713,13 @@
       // The dot only exists once the bubble has been moved off its spot; while the spot is still
       // under the bubble, dragging anywhere on the bubble moves the bubble.
       if (edLoupeDetached(cur) && Math.hypot(r.x + s.x * r.w - p.x, r.y + s.y * r.h - p.y) <= 18) {
-        ED.drag = { mode: 'loupeSrc', idx: ED.sel, orig: Object.assign({}, cur), start: p };
+        ED.drag = { mode: 'loupeSrc', idx: ED.sel, orig: Object.assign({}, cur), start: p, before: edCaptureAnnoState() };
         return;
       }
     }
     const i = edHitAnno(p);
     ED.sel = i;
-    if (i >= 0) ED.drag = { mode: 'moveAnno', idx: i, orig: Object.assign({}, ED.annos[i]), start: p };
+    if (i >= 0) ED.drag = { mode: 'moveAnno', idx: i, orig: Object.assign({}, ED.annos[i]), start: p, before: edCaptureAnnoState() };
     edSyncUI();
     edRender();
   }
@@ -4652,12 +4733,12 @@
       const text = edTextInput.value.trim();
       if (!text) { edTextInput.focus(); return; }
       // Like the shapes: press where it should go, drag to adjust, release to place it.
-      ED.drag = { mode: 'textPlace' };
+      ED.drag = { mode: 'textPlace', before: edCaptureAnnoState() };
       ED.temp = { t: 'text', x: n.x, y: n.y, text: text, c: ED.color, s: ED.size };
       edRender();
       return;
     }
-    ED.drag = { mode: 'draw' };
+    ED.drag = { mode: 'draw', before: edCaptureAnnoState() };
     ED.temp = { t: ED.tool, x1: n.x, y1: n.y, x2: n.x, y2: n.y, c: ED.color, s: ED.size };
     if (ED.tool === 'loupe') { ED.temp.sx = n.x; ED.temp.sy = n.y; ED.temp.z = ED.loupeZoom; }
   }
@@ -4709,11 +4790,15 @@
       const t = ED.temp;
       ED.temp = null;
       ED.annos.push(t);
-      ED.redo = [];
-      edSetTool('move');                           // same as the shapes: the text stays selected for moving / recolouring
+      edSetTool('move');                           // the text stays selected for moving / recolouring
       ED.sel = ED.annos.length - 1;
+      edRecordAnnoChange(d.before);
       edSyncUI();
       edRender();
+      return;
+    }
+    if (d && (d.mode === 'moveAnno' || d.mode === 'loupeSrc')) {
+      edRecordAnnoChange(d.before);
       return;
     }
     if (!d || d.mode !== 'draw' || !ED.temp) return;
@@ -4721,9 +4806,9 @@
     ED.temp = null;
     if (Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h) > 10) {
       ED.annos.push(a);
-      ED.redo = [];
       edSetTool('move');                           // the new shape stays selected: move, recolour or resize it
       ED.sel = ED.annos.length - 1;                // until another one is added
+      edRecordAnnoChange(d.before);
       edSyncUI();
     }
     edRender();
@@ -4976,22 +5061,9 @@
     }
   }
 
-  /* Point (u, v) of the unit square, mapped into the four-cornered shape P (TL, TR, BR, BL),
-     with the same perspective mapping the export uses. */
+  /* Point (u, v) of the unit square mapped into P using the shared export transform. */
   function edUnitToQuad(P, u, v) {
-    const dx1 = P[1].x - P[2].x, dx2 = P[3].x - P[2].x, sx = P[0].x - P[1].x + P[2].x - P[3].x;
-    const dy1 = P[1].y - P[2].y, dy2 = P[3].y - P[2].y, sy = P[0].y - P[1].y + P[2].y - P[3].y;
-    const den = dx1 * dy2 - dx2 * dy1;
-    let g = 0, h = 0;
-    if ((Math.abs(sx) > 1e-9 || Math.abs(sy) > 1e-9) && Math.abs(den) > 1e-12) {
-      g = (sx * dy2 - dx2 * sy) / den;
-      h = (dx1 * sy - sx * dy1) / den;
-    }
-    const w = g * u + h * v + 1;
-    return {
-      x: ((P[1].x - P[0].x + g * P[1].x) * u + (P[3].x - P[0].x + h * P[3].x) * v + P[0].x) / w,
-      y: ((P[1].y - P[0].y + g * P[1].y) * u + (P[3].y - P[0].y + h * P[3].y) * v + P[0].y) / w
-    };
+    return quadMapPoint(quadHomography(P), u, v);
   }
 
   let autoBusy = false;
@@ -5050,10 +5122,13 @@
     ED.annos = [];
     ED.annosP = [];
     ED.visIds = new Set();
-    ED.redo = [];
     ED.sel = -1;
     ED.temp = null;
-    edSyncButtons();
+    // This action also changes the crop coordinate system, so discard annotation-only history.
+    ED.undo = [];
+    ED.redo = [];
+    ED.historyKey = edQuadKey();
+    edSyncUI();
     edRender();
   });
 
@@ -5079,8 +5154,13 @@
     b.style.background = color;
     b.setAttribute('aria-label', 'Colour ' + color);
     b.addEventListener('click', () => {
+      const selected = ED.annos[ED.sel];
+      const before = selected ? edCaptureAnnoState() : null;
       ED.color = color;
-      if (ED.annos[ED.sel]) ED.annos[ED.sel].c = color;     // recolours the selected annotation too
+      if (selected) {
+        selected.c = color;
+        edRecordAnnoChange(before);
+      }
       edColorsRow.querySelectorAll('.ed-swatch').forEach(s => s.classList.toggle('active', s === b));
       edRender();
     });
@@ -5108,54 +5188,45 @@
   edSizeBtn.addEventListener('click', () => {
     const nextSize = (ED.size + 1) % ED_SIZE_NAMES.length;
     const a = ED.annos[ED.sel];
+    const before = a ? edCaptureAnnoState() : null;
     if (a) {
       if (a.t === 'text' && Array.isArray(a.quad)) {
-        const before = edTextMeasure(a.text, a.s).fs;
-        const after = edTextMeasure(a.text, nextSize).fs;
-        const ratio = before > 0 ? after / before : 1;
+        const beforeFs = edTextMeasure(a.text, a.s).fs;
+        const afterFs = edTextMeasure(a.text, nextSize).fs;
+        const ratio = beforeFs > 0 ? afterFs / beforeFs : 1;
         edScaleTextQuad(a, ratio, ratio);
       }
       a.s = nextSize;
     }
     ED.size = nextSize;
     edSizeBtn.textContent = 'Size: ' + ED_SIZE_NAMES[ED.size];
+    if (a) edRecordAnnoChange(before);
     edRender();
   });
   
-  edUndoBtn.addEventListener('click', () => {
-    if (!ED.annos.length) return;
-    ED.redo.push(ED.annos.pop());
-    ED.redoKey = edQuadKey();
-    if (ED.sel >= ED.annos.length) ED.sel = -1;
-    edSyncUI();
-    edRender();
-  });
-
-  edRedoBtn.addEventListener('click', () => {
-    if (!ED.redo.length) return;
-    if (ED.redoKey !== edQuadKey()) { ED.redo = []; edSyncUI(); return; }   // the crop changed meanwhile
-    ED.annos.push(ED.redo.pop());
-    edSyncUI();
-    edRender();
-  });
+  edUndoBtn.addEventListener('click', () => edStepHistory(ED.undo, ED.redo));
+  edRedoBtn.addEventListener('click', () => edStepHistory(ED.redo, ED.undo));
 
   edClearBtn.addEventListener('click', () => {
     if (!edAnnoCount()) return;
     if (!confirm('Remove all annotations?')) return;
+    const before = edCaptureAnnoState();
     ED.annos = [];
     ED.annosP = [];
     ED.visIds = new Set();
-    ED.redo = [];
     ED.sel = -1;
     ED.temp = null;
+    edRecordAnnoChange(before);
     edSyncUI();
     edRender();
   });
 
   edDeleteBtn.addEventListener('click', () => {
     if (!ED.annos[ED.sel]) return;
+    const before = edCaptureAnnoState();
     ED.annos.splice(ED.sel, 1);
     ED.sel = -1;
+    edRecordAnnoChange(before);
     edSyncUI();
     edRender();
   });
@@ -5165,8 +5236,10 @@
     const v = parseFloat(edZoomInput.value) || 2.5;
     const a = ED.annos[ED.sel];
     const selLoupe = !!a && a.t === 'loupe';
+    const before = selLoupe ? edCaptureAnnoState() : null;
     if (selLoupe) a.z = v;
     if (ED.tool === 'loupe' || !selLoupe) ED.loupeZoom = v;
+    if (selLoupe) edRecordAnnoChange(before);
     edZoomVal.textContent = v.toFixed(1) + '×';
     edRender();
   });
@@ -5177,12 +5250,14 @@
     if (ED.tool === 'move' && a && a.t === 'text') {      // editing the selected text
       const t = edTextInput.value.trim();
       if (t) {
+        const before = edCaptureAnnoState();
         if (Array.isArray(a.quad)) {
           const before = edTextMeasure(a.text, a.s).width;
           const after = edTextMeasure(t, a.s).width;
           if (before > 0) edScaleTextQuad(a, after / before, 1);
         }
         a.text = t;
+        edRecordAnnoChange(before);
         edRender();
       }                                                   // an empty box keeps the old text
     } else {
@@ -5197,10 +5272,6 @@
   });
 
   /* Tabs */
-  function edResizeSoon() {
-    requestAnimationFrame(() => { edResize(); edRender(); });
-  }
-
   /* Reserves room for the taller of the two tool panels, so the picture area is the same size
      on both tabs. The panel sits at the bottom of that space (see .ed-tools-wrap). */
   const edToolsWrap = document.getElementById('edToolsWrap');
@@ -5225,7 +5296,7 @@
   function edSwitchTab(tab) {
     if (tab === ED.tab || !ED.bmp) return;
     if (tab === 'anno') {
-      if (ED.redo.length && ED.redoKey !== edQuadKey()) ED.redo = [];
+      edEnsureHistoryContext();
       edBuildBase();
       ED.annos = edAnnosToCrop(ED.annosP, edQuad());     // the ones inside this crop, edited in crop space
       ED.visIds = new Set(ED.annos.map(a => a.id));
@@ -5237,7 +5308,6 @@
     ED.drag = null;
     ED.temp = null;
     edSetTabUI();
-    edResizeSoon();
   }
 
   function edSetTabUI() {
@@ -5262,7 +5332,9 @@
     ED.rot = 0;
     ED.tab = 'crop';
     ED.drag = null; ED.temp = null;
+    ED.undo = [];
     ED.redo = [];
+    ED.historyKey = '';
     editorEl.hidden = false;
     edSetTabUI();
     edSetTool('arrow');
@@ -5298,12 +5370,9 @@
     ED.annosP = e && e.ui && e.ui.annosP ? e.ui.annosP.map(a => Object.assign({}, a)) : [];
     ED.annos = [];
     ED.visIds = new Set();
+    ED.historyKey = edQuadKey();
     ED.baseCanvas = null;
     ED.baseKey = '';
-    if (ED.annosP.some(a => ((a.t === 'rect' || a.t === 'ellipse') && !Array.isArray(a.poly)) || (a.t === 'text' && !Array.isArray(a.quad)))) {
-      edBuildBase();
-      ED.annosP = edUpgradeLegacyAnnoGeometry(ED.annosP, edQuad(), ED.baseCanvas.width, ED.baseCanvas.height);
-    }
     edSyncButtons();
     edRender();
   }
