@@ -270,8 +270,8 @@
 			height: 100dvh;
 			overflow: hidden;
 
-			/* Reserve exactly enough room for the bottom action bar */
-			padding-bottom: calc(72px + env(safe-area-inset-bottom));
+			/* Safe area at the top; bottom is handled by action-bar */
+			padding: calc(12px + env(safe-area-inset-top)) 12px 0;
 		}
 
 		/* These sections keep their natural height */
@@ -294,6 +294,24 @@
 			flex: 1 1 auto;
 			min-height: 0;
 			max-height: none;
+		}
+
+		/* Action bar participates in the layout instead of overlapping */
+		.action-bar {
+			position: static;
+			transform: none;
+			left: auto;
+			bottom: auto;
+
+			flex: 0 0 auto;
+
+			width: calc(100% + 24px);
+			max-width: none;
+			margin: 0 -12px;
+
+			padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+
+			z-index: auto;
 		}
 	}
 
@@ -392,18 +410,25 @@
       transform: scale(1.08);
     }
 
-    .action-bar {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 520px;
-      padding: 12px 12px calc(12px + env(safe-area-inset-bottom)) 12px;
-      background: var(--bar-bg);
-      backdrop-filter: blur(10px);
-      z-index: 100;
-    }
+	/* Action bar stays at the bottom and centred */
+	.action-bar {
+		position: static;
+		transform: none;
+		left: auto;
+		bottom: auto;
+
+		flex: 0 0 auto;
+		align-self: center;
+
+		width: calc(100% + 24px);
+		max-width: 520px;
+		margin: 0 -12px;
+
+		padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+
+		box-sizing: border-box;
+		z-index: auto;
+	}
 
     .action-grid {
       display: grid;
@@ -1082,7 +1107,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.9</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.95</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -5261,7 +5286,6 @@
 
   /* Annotations belong to one particular crop. */
   /* Annotations follow the photo, so changing the crop never removes them. */
-  function edAnnosConsistent() { return true; }
 
   function edSwitchTab(tab) {
     if (tab === ED.tab || !ED.bmp) return;
