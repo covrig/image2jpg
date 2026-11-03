@@ -10,6 +10,7 @@ A client-side, single-page web app that batch-converts images (HEIC, JPEG, PNG, 
 - **HEIC / HEIF support** 
 - **Scale presets** — 1080p / 720p box fit, or 25 / 50 / 75 / 100 % 
 - **JPEG quality**
+- **Precise crop and automatic document/sign crop**
 - **Built-in editor** — crop with draggable corners, autocrop, straighten slider (−45° to +45°), perspective correction, plus annotations: arrow, circle, rectangle, loupe and text
 - **Custom file naming** — prefix, keep original name, date stamp, suffix, quality tag
 - **Export** — ZIP download or mobile share (email, IM)
