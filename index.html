@@ -221,11 +221,8 @@
     #refreshBtn {
       color: lime;	
     }
-    
-
-
-
-    input[type="number"], input[type="text"] {
+ 
+    input[type="text"] {
       background: var(--field-bg);
       border: 1px solid var(--border-color);
       color: var(--text-main);
@@ -237,7 +234,7 @@
       min-width: 0;
     }
 
-    input[type="number"]:focus, input[type="text"]:focus {
+    input[type="text"]:focus {
       outline: 2px solid var(--accent-color);
       outline-offset: -1px;
     }
@@ -1107,7 +1104,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.95</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.8</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1913,7 +1910,8 @@
       const size = Math.min((((buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3]) >>> 0) || 32, buf.length);
       const brands = [major];
       for (let i = 16; i + 4 <= size; i += 4) brands.push(asc(i, i + 4));
-      if (brands.some(b => HEIC_BRANDS.has(b))) return { kind: 'heic', mime: 'image/heic' };
+	  if (brands.some(b => b === 'avif' || b === 'avis')) return { kind: 'avif', mime: 'image/avif' };
+	  if (brands.some(b => HEIC_BRANDS.has(b))) return { kind: 'heic', mime: 'image/heic' };
     }
     return { kind: 'unknown', mime: '' };   // BMP, TIFF, etc.: fall back to name / MIME type
   }
@@ -2940,8 +2938,8 @@
           outFile = new File([outBlob], name, { type: mime });
         }
         processedFilesCache.push(outFile);
-        /* Badge turns accent blue and reports the format it really came out as:
-           HEIC -> jpg, Original -> whatever it stayed as (jpg / png / webp). */
+        <!-- Badge turns accent blue and reports the format it really came out as: -->
+
         selectedFiles[i].converted = true;
         markThumbConverted(selectedFiles[i], outFile);
         addConversionLogEntry(
@@ -3897,13 +3895,13 @@
   const ED = {
     token: 0, file: null, bmp: null, srcBmp: null, bw: 0, bh: 0, tab: 'crop',
     base: fullQuad(), angle: 0, rot: 0,          // rot: quarter turns clockwise (bmp is the turned copy of srcBmp)
-    redo: [], redoKey: '', textIdx: -1,
-    annos: [], annoKey: '', sel: -1,
+    redo: [], redoKey: '',
+    annos: [], sel: -1,
     annosP: [], visIds: new Set(), uid: 0,      // annosP: every annotation, in photo space (follows the picture, not the crop)
     tool: 'arrow', color: ED_COLORS[0], size: 1, loupeZoom: 2.5,
     baseCanvas: null, baseKey: '',
     rect: { x: 0, y: 0, w: 1, h: 1 }, cw: 1, ch: 1, dpr: 1,
-    drag: null, temp: null, textPos: null
+    drag: null, temp: null
   };
 
   /* Rotate a 0..1 point about the photo centre, measured in real pixels so shapes stay square. */
@@ -4337,17 +4335,6 @@
     drawAnnotations(ctx, r.w, r.h, list, c, makeMainCanvas);
     ctx.restore();
     if (ED.sel >= 0 && ED.annos[ED.sel]) edDrawSelection(ctx, ED.annos[ED.sel]);
-    if (ED.textPos && ED.textIdx < 0) {              // small cross where the text will go
-      const x = r.x + ED.textPos.x * r.w, y = r.y + ED.textPos.y * r.h;
-      ctx.save();
-      ctx.strokeStyle = '#3880ff';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y);
-      ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8);
-      ctx.stroke();
-      ctx.restore();
-    }
   }
 
   /* The cropped picture that annotations are drawn on (at most 1600 px). */
@@ -4470,42 +4457,6 @@
   function edAnnoPoint(p) {
     const r = ED.rect;
     return { x: clamp01((p.x - r.x) / r.w), y: clamp01((p.y - r.y) / r.h) };
-  }
-
-  /* Text is added straight away: typing creates (or edits) a text annotation on the picture,
-     tapping the picture places it, and the Move tool repositions it later. */
-  function edCommitText() {
-    ED.textIdx = -1;
-    ED.textPos = null;                               // the text box itself keeps its content
-  }
-
-  function edLiveText() {
-    const text = edTextInput.value.trim();
-    if (ED.textIdx >= 0 && !ED.annos[ED.textIdx]) ED.textIdx = -1;
-    if (ED.textIdx >= 0) {
-      if (!text) {
-        ED.annos.splice(ED.textIdx, 1);
-        ED.textIdx = -1;
-        if (!ED.annos.length) ED.annoKey = '';
-      } else {
-        ED.annos[ED.textIdx].text = text;
-      }
-    } else if (text) {
-      const pos = ED.textPos || { x: 0.5, y: 0.5 };
-      if (!ED.annos.length) ED.annoKey = edQuadKey();
-      ED.annos.push({ t: 'text', x: pos.x, y: pos.y, text: text, c: ED.color, s: ED.size });
-      ED.textIdx = ED.annos.length - 1;
-      ED.redo = [];
-    }
-    edSyncButtons();
-    edRender();
-  }
-
-  function edPlaceText(n) {
-    ED.textPos = n;
-    const a = ED.annos[ED.textIdx];
-    if (a) { a.x = n.x; a.y = n.y; }
-    edRender();
   }
 
   const edZoomRow = document.getElementById('edZoomRow');
@@ -4757,7 +4708,6 @@
     if (d && d.mode === 'textPlace' && ED.temp) {
       const t = ED.temp;
       ED.temp = null;
-      if (!ED.annos.length) ED.annoKey = edQuadKey();
       ED.annos.push(t);
       ED.redo = [];
       edSetTool('move');                           // same as the shapes: the text stays selected for moving / recolouring
@@ -4770,7 +4720,6 @@
     const a = ED.temp, r = ED.rect;
     ED.temp = null;
     if (Math.hypot((a.x2 - a.x1) * r.w, (a.y2 - a.y1) * r.h) > 10) {
-      if (!ED.annos.length) ED.annoKey = edQuadKey();
       ED.annos.push(a);
       ED.redo = [];
       edSetTool('move');                           // the new shape stays selected: move, recolour or resize it
@@ -5101,23 +5050,19 @@
     ED.annos = [];
     ED.annosP = [];
     ED.visIds = new Set();
-    ED.annoKey = '';
     ED.redo = [];
     ED.sel = -1;
     ED.temp = null;
-    edCommitText();
     edSyncButtons();
     edRender();
   });
 
   /* Annotation tools */
   function edSetTool(tool) {
-    const live = ED.textIdx;                       // text being typed, if any
     ED.tool = tool;
     document.querySelectorAll('#edToolsAnno [data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
-    if (tool !== 'text') { edCommitText(); ED.temp = null; }
-    if (tool === 'move' && live >= 0) ED.sel = live;        // finished text stays selected
-    else if (tool !== 'move' && tool !== 'loupe') ED.sel = -1;   // the selection only matters while moving / adjusting a loupe
+    if (tool !== 'text') ED.temp = null;
+    if (tool !== 'move' && tool !== 'loupe') ED.sel = -1;
     edSyncUI();
     edRender();
   }
@@ -5137,7 +5082,6 @@
       ED.color = color;
       if (ED.annos[ED.sel]) ED.annos[ED.sel].c = color;     // recolours the selected annotation too
       edColorsRow.querySelectorAll('.ed-swatch').forEach(s => s.classList.toggle('active', s === b));
-      if (ED.annos[ED.textIdx]) ED.annos[ED.textIdx].c = color;   // text being typed
       edRender();
     });
     edColorsRow.appendChild(b);
@@ -5163,10 +5107,8 @@
 
   edSizeBtn.addEventListener('click', () => {
     const nextSize = (ED.size + 1) % ED_SIZE_NAMES.length;
-    const selected = ED.annos[ED.sel];
-    const typing = ED.annos[ED.textIdx];
-    [selected, typing].forEach(a => {
-      if (!a) return;
+    const a = ED.annos[ED.sel];
+    if (a) {
       if (a.t === 'text' && Array.isArray(a.quad)) {
         const before = edTextMeasure(a.text, a.s).fs;
         const after = edTextMeasure(a.text, nextSize).fs;
@@ -5174,18 +5116,16 @@
         edScaleTextQuad(a, ratio, ratio);
       }
       a.s = nextSize;
-    });
+    }
     ED.size = nextSize;
     edSizeBtn.textContent = 'Size: ' + ED_SIZE_NAMES[ED.size];
     edRender();
   });
-
+  
   edUndoBtn.addEventListener('click', () => {
     if (!ED.annos.length) return;
     ED.redo.push(ED.annos.pop());
     ED.redoKey = edQuadKey();
-    if (!ED.annos.length) ED.annoKey = '';
-    if (ED.textIdx >= ED.annos.length) edCommitText();
     if (ED.sel >= ED.annos.length) ED.sel = -1;
     edSyncUI();
     edRender();
@@ -5194,7 +5134,6 @@
   edRedoBtn.addEventListener('click', () => {
     if (!ED.redo.length) return;
     if (ED.redoKey !== edQuadKey()) { ED.redo = []; edSyncUI(); return; }   // the crop changed meanwhile
-    if (!ED.annos.length) ED.annoKey = edQuadKey();
     ED.annos.push(ED.redo.pop());
     edSyncUI();
     edRender();
@@ -5206,11 +5145,9 @@
     ED.annos = [];
     ED.annosP = [];
     ED.visIds = new Set();
-    ED.annoKey = '';
     ED.redo = [];
     ED.sel = -1;
     ED.temp = null;
-    edCommitText();
     edSyncUI();
     edRender();
   });
@@ -5219,7 +5156,6 @@
     if (!ED.annos[ED.sel]) return;
     ED.annos.splice(ED.sel, 1);
     ED.sel = -1;
-    if (!ED.annos.length) ED.annoKey = '';
     edSyncUI();
     edRender();
   });
@@ -5257,7 +5193,6 @@
     if (e.key === 'Enter') {                     // done typing: the text stays selected in Move mode
       e.preventDefault();
       edTextInput.blur();
-      if (ED.textIdx >= 0) edSetTool('move');
     }
   });
 
@@ -5296,7 +5231,6 @@
       ED.visIds = new Set(ED.annos.map(a => a.id));
       ED.sel = -1;
     } else {
-      edCommitText();
       edAnnosStore();
     }
     ED.tab = tab;
@@ -5327,8 +5261,8 @@
     ED.srcBmp = null;
     ED.rot = 0;
     ED.tab = 'crop';
-    ED.drag = null; ED.temp = null; ED.textPos = null;
-    ED.redo = []; ED.textIdx = -1;
+    ED.drag = null; ED.temp = null;
+    ED.redo = [];
     editorEl.hidden = false;
     edSetTabUI();
     edSetTool('arrow');
@@ -5364,14 +5298,12 @@
     ED.annosP = e && e.ui && e.ui.annosP ? e.ui.annosP.map(a => Object.assign({}, a)) : [];
     ED.annos = [];
     ED.visIds = new Set();
-    ED.annoKey = '';
     ED.baseCanvas = null;
     ED.baseKey = '';
     if (ED.annosP.some(a => ((a.t === 'rect' || a.t === 'ellipse') && !Array.isArray(a.poly)) || (a.t === 'text' && !Array.isArray(a.quad)))) {
       edBuildBase();
       ED.annosP = edUpgradeLegacyAnnoGeometry(ED.annosP, edQuad(), ED.baseCanvas.width, ED.baseCanvas.height);
     }
-    edCommitText();
     edSyncButtons();
     edRender();
   }
@@ -5398,7 +5330,7 @@
 
   document.getElementById('edDone').addEventListener('click', () => {
     if (!ED.bmp || !ED.file) return;
-    if (ED.tab === 'anno') { edCommitText(); edAnnosStore(); }
+    if (ED.tab === 'anno') { edAnnosStore(); }
     const quad = (edIsFull() && !ED.rot) ? null : edQuad().map(p => edToSrc(p, ED.rot));
     const annos = edAnnosToCrop(ED.annosP, edQuad());      // crop space, for the converter
     if (!quad && !annos.length) {
@@ -5408,8 +5340,7 @@
         quad: quad,
         ui: { base: ED.base.map(p => ({ x: p.x, y: p.y })), angle: ED.angle, rot: ED.rot,
               annosP: ED.annosP.map(a => Object.assign({}, a)) },
-        annos: annos,
-        annoKey: ''
+        annos: annos
       };
     }
     closeEditor(true);
