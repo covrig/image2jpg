@@ -151,9 +151,9 @@
     }
 
     .card-title {
-      font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-bottom: 7px;
       color: var(--text-sub);
       text-transform: uppercase;
       letter-spacing: 0.8px;
@@ -273,7 +273,7 @@
     #thumbGrid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      gap: 5px;
       width: 100%;
     }
 
@@ -294,7 +294,7 @@
 
     .thumb {
       width: 100%;
-      height: 100%;
+      height: 85%;
       object-fit: cover;
     }
 
@@ -304,11 +304,11 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
+      background: rgba(40, 40, 40, 0.4);
+      backdrop-filter: blur(6px);
       padding: 3px 4px 4px 4px;
       text-align: center;
-      line-height: 1.3;
+      line-height: 1.2;
     }
 
     .thumb-ext {
@@ -327,7 +327,7 @@
 
     .thumb-size {
       font-size: 9px;
-      font-weight: 600;
+      font-weight: 500;
       color: #ffffff;
       font-variant-numeric: tabular-nums;
     }
@@ -336,18 +336,18 @@
       position: absolute;
       top: 4px;
       right: 4px;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       border: none;
       background: rgba(0, 0, 0, 0.65);
       color: #ffffff;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 700;
-      line-height: 24px;
+      line-height: 20px;
       text-align: center;
       cursor: pointer;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
       padding: 0;
     }
 
@@ -366,7 +366,6 @@
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom)) 12px;
       background: var(--bar-bg);
       backdrop-filter: blur(10px);
-      border-top: 1px solid var(--border-color);
       z-index: 100;
     }
 
@@ -1047,7 +1046,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.7</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.8</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1063,14 +1062,14 @@
     <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" style="display: none;">
     <div class="drop-zone" id="dropZone">
       <span style="font-size: 20px;">🖼️</span>
-      <span class="drop-zone-text" id="dropZoneText">Tap to Select Images</span>
+      <span class="drop-zone-text" id="dropZoneText">TAP TO SELECT IMAGES</span>
     </div>
   </div>
 
   <div class="card card-opts">
     <div class="select-row">
       <div class="select-col">
-        <label class="card-title" for="sizeSelect">Scale Size</label>
+        <label class="card-title" for="sizeSelect">REDUCE SIZE TO</label>
         <select class="select" id="sizeSelect">
           <optgroup label="Max size">
             <option value="b1080">1080p</option>
@@ -1085,7 +1084,7 @@
         </select>
       </div>
       <div class="select-col">
-        <label class="card-title" for="qualitySelect">Quality</label>
+        <label class="card-title" for="qualitySelect">REDUCE QUALITY TO</label>
         <select class="select" id="qualitySelect">
           <option value="60">60%</option>
           <option value="70">70%</option>
@@ -1112,15 +1111,15 @@
   <div class="action-bar">
     <div id="singleActionContainer">
       <button class="btn-action" id="actionButton" disabled>
-        Select Images First
+        SELECT IMAGES FIRST
       </button>
     </div>
     <div id="dualActionContainer" class="action-grid" style="display: none;">
       <button class="btn-action btn-secondary" id="zipButton">
-        📦 Download ZIP
+        📦 DOWNLOAD ZIP
       </button>
       <button class="btn-action ready-state" id="shareButton">
-        📤 Share
+        📤 SHARE
       </button>
     </div>
   </div>
@@ -2103,11 +2102,11 @@
     resetThumbBadges();
     if (selectedFiles.length > 0) {
       actionButton.disabled = false;
-      actionButton.textContent = `Resize ${selectedFiles.length} image${selectedFiles.length === 1 ? '' : 's'}`;
+      actionButton.textContent = `RESIZE ${selectedFiles.length} IMAGE${selectedFiles.length === 1 ? '' : 'S'}`;
       updateSizeStats(totalOriginalSize, null);
     } else {
       actionButton.disabled = true;
-      actionButton.textContent = 'Select Images First';
+      actionButton.textContent = 'SELECT IMAGES FIRST';
       updateSizeStats(0);
     }
   }
@@ -5529,7 +5528,7 @@
     resetApp();
 
     if (isFinePointer) {
-      dropZoneText.textContent = 'Select or drop images here';
+      dropZoneText.textContent = 'SELECT OR DROP IMAGES HERE';
       emptyState.innerHTML = 'NO IMAGES YET';
     } else {
       emptyState.textContent = 'No images selected yet';
