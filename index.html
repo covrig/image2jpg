@@ -261,6 +261,42 @@
       }
     }
 
+	/* ---- Flexible mobile preview layout ---- */
+	@media (max-width: 899px) {
+
+		body {
+			display: flex;
+			flex-direction: column;
+			height: 100dvh;
+			overflow: hidden;
+
+			/* Reserve exactly enough room for the bottom action bar */
+			padding-bottom: calc(72px + env(safe-area-inset-bottom));
+		}
+
+		/* These sections keep their natural height */
+		.header,
+		.card-drop,
+		.card-opts {
+			flex: 0 0 auto;
+		}
+
+		/* Preview fills all remaining vertical space */
+		.card-preview {
+			display: flex;
+			flex: 1 1 0;
+			flex-direction: column;
+			min-height: 0;
+		}
+
+		/* Thumbnail area expands inside Preview */
+		.card-preview .thumb-grid-container {
+			flex: 1 1 auto;
+			min-height: 0;
+			max-height: none;
+		}
+	}
+
     .empty-state {
       color: var(--text-sub);
       font-size: 13px;
@@ -1046,7 +1082,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.8</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.9</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
