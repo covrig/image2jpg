@@ -1104,11 +1104,11 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.7.8</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
-      <button class="btn-icon log-button" id="logBtn" title="Conversion / resize log" aria-label="Open conversion and resize log">☷ LOG</button>
+      <button class="btn-icon log-button" id="logBtn" title="Conversion log" aria-label="Open log">☷ LOG</button>
       <button class="btn-icon" id="settingsBtn" title="Settings">⚙</button>
       <button class="btn-refresh" id="refreshBtn" title="Start over">
         <span>↺</span> RESET
@@ -1287,7 +1287,7 @@
     <div class="error-dialog-backdrop" id="conversionLogBackdrop"></div>
     <section class="error-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="conversionLogTitle">
       <div class="error-dialog-header">
-        <h2 id="conversionLogTitle">Conversion / Resize Log</h2>
+        <h2 id="conversionLogTitle">Conversion Log</h2>
         <p class="error-dialog-summary" id="conversionLogSummary"></p>
       </div>
       <div class="error-dialog-list" id="conversionLogList" role="list"></div>
@@ -2680,7 +2680,7 @@
     }
   }
 
-  /* Conversion / resize log. All user-provided names and browser messages are
+  /* Conversion log. All user-provided names and browser messages are
      inserted as text, never parsed as HTML. */
   const conversionLogDialog = document.getElementById('conversionLogDialog');
   const conversionLogList = document.getElementById('conversionLogList');
@@ -2690,14 +2690,14 @@
   function updateLogButton() {
     logBtn.classList.remove('has-errors', 'has-warnings', 'all-good');
     if (!conversionLogHasRun) {
-      logBtn.title = 'Conversion / resize log';
+      logBtn.title = 'Conversion log';
       return;
     }
     if (conversionLogHasErrors) {
       logBtn.classList.add('has-errors');
       logBtn.title = conversionLogHasWarnings
         ? 'Errors occurred; one or more truncated JPEGs were also patched — open the log'
-        : 'Errors occurred — open the conversion / resize log';
+        : 'Errors occurred — open the log';
     } else if (conversionLogHasWarnings) {
       logBtn.classList.add('has-warnings');
       logBtn.title = 'One or more truncated JPEGs were patched on load — open the log';
@@ -2945,7 +2945,7 @@
         addConversionLogEntry(
           'success',
           selectedFiles[i].name,
-          `${extFromMime(outFile.type).toUpperCase()} · ${formatBytes(selectedFiles[i].size)} → ${formatBytes(outFile.size)} · Output: ${outFile.name}`,
+          `${outFile.name} ${formatBytes(selectedFiles[i].size)} > ${formatBytes(outFile.size)}`,
           i
         );
         refreshOutputThumbnail(selectedFiles[i], outFile);
