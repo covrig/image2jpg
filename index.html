@@ -182,7 +182,7 @@
     }
 
 
-    /* ---- Size / format dropdowns ---- */
+    /* ---- Size / quality dropdowns ---- */
     .select-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -217,7 +217,7 @@
     }
 
     #refreshBtn {
-      color: lime;	
+      color: lime;
     }
  
     input[type="text"] {
@@ -248,42 +248,42 @@
       transition: max-height 0.2s ease, min-height 0.2s ease;
     }
 
-	/* ---- Flexible mobile preview layout ---- */
-	@media (max-width: 899px) {
+    /* ---- Flexible mobile preview layout ---- */
+    @media (max-width: 899px) {
 
-		body {
-			display: flex;
-			flex-direction: column;
-			height: 100dvh;
-			overflow: hidden;
+      body {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
 
-			/* Safe area at the top; bottom is handled by action-bar */
-			padding: calc(12px + env(safe-area-inset-top)) 12px 0;
-		}
+        /* Safe area at the top; bottom is handled by action-bar */
+        padding: calc(12px + env(safe-area-inset-top)) 12px 0;
+      }
 
-		/* These sections keep their natural height */
-		.header,
-		.card-drop,
-		.card-opts {
-			flex: 0 0 auto;
-		}
+      /* These sections keep their natural height */
+      .header,
+      .card-drop,
+      .card-opts {
+        flex: 0 0 auto;
+      }
 
-		/* Preview fills all remaining vertical space */
-		.card-preview {
-			display: flex;
-			flex: 1 1 0;
-			flex-direction: column;
-			min-height: 0;
-		}
+      /* Preview fills all remaining vertical space */
+      .card-preview {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        min-height: 0;
+      }
 
-		/* Thumbnail area expands inside Preview */
-		.card-preview .thumb-grid-container {
-			flex: 1 1 auto;
-			min-height: 0;
-			max-height: none;
-		}
+      /* Thumbnail area expands inside Preview */
+      .card-preview .thumb-grid-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+      }
 
-	}
+    }
 
     .empty-state {
       color: var(--text-sub);
@@ -339,15 +339,13 @@
       font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      color: #ffffff;                 /* HEIC stays white */
+      color: #ffffff;                 /* HEIC (.is-heic) stays white */
     }
 
-    /* Any other format gets lime before conversion */
-    .thumb-ext.is-heic     { color: #ffffff; }
-    .thumb-ext.is-other    { color: #00ff00; }
-    /* After conversion everything turns accent blue */
-    .thumb-ext.is-converted{ color: #00ff00; }
-    .thumb-ext.is-failed   { color: var(--danger-color); }
+    /* Other formats before conversion, and every photo after conversion, are lime */
+    .thumb-ext.is-other,
+    .thumb-ext.is-converted { color: #00ff00; }
+    .thumb-ext.is-failed    { color: var(--danger-color); }
 
     .thumb-size {
       font-size: 9px;
@@ -559,7 +557,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-	  padding: 12px; 
+      padding: 12px;
     }
 
     .sheet[hidden] { display: none; }
@@ -842,7 +840,6 @@
       transform-origin: 50% 50%;
       will-change: transform;
       -webkit-user-drag: none;
-      user-drag: none;
       pointer-events: none;
     }
 
@@ -985,7 +982,7 @@
 
       h1 { font-size: 22px; }
 
-      .card { margin-bottom: 0 !important; padding: 14px; border-radius: 16px; }
+      .card { margin-bottom: 0; padding: 14px; border-radius: 16px; }
 
       .card-drop { grid-column: 1; grid-row: 2; }
       .card-opts { grid-column: 1; grid-row: 3; }
@@ -1054,9 +1051,8 @@
         padding: 20vh 0 0 0;
       }
 
-      /* Settings as a centred dialog rather than a bottom sheet */
-      .sheet { align-items: center; }
-      .sheet-panel { border-radius: 18px; max-width: 480px; max-height: 90vh; }
+      /* Settings dialog: a little narrower on desktop */
+      .sheet-panel { max-width: 480px; max-height: 90vh; }
     }
   </style>
 </head>
@@ -1064,7 +1060,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.3</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.5</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1076,8 +1072,8 @@
     </div>
   </div>
 
-  <div class="card card-drop" style="margin-bottom: 8px;">
-    <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" style="display: none;">
+  <div class="card card-drop">
+    <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif,.hif" style="display: none;">
     <div class="drop-zone" id="dropZone">
       <span style="font-size: 20px;">🖼️</span>
       <span class="drop-zone-text" id="dropZoneText">TAP TO SELECT IMAGES</span>
@@ -1087,9 +1083,9 @@
   <div class="card card-opts">
     <div class="select-row">
       <div class="select-col">
-        <label class="card-title" for="sizeSelect">REDUCE SIZE TO</label>
+        <label class="card-title" for="sizeSelect">NEW RESOLUTION</label>
         <select class="select" id="sizeSelect">
-          <optgroup label="Max size">
+          <optgroup label="Max resolution">
             <option value="b1080">1080p</option>
             <option value="b720">720p</option>
           </optgroup>
@@ -1102,14 +1098,19 @@
         </select>
       </div>
       <div class="select-col">
-        <label class="card-title" for="qualitySelect">REDUCE QUALITY TO</label>
+        <label class="card-title" for="qualitySelect">QUALITY / FILE SIZE</label>
         <select class="select" id="qualitySelect">
-          <option value="60">60%</option>
-          <option value="70">70%</option>
-          <option value="80" selected>80%</option>
-          <option value="85">85%</option>
-          <option value="90">90%</option>
-          <option value="95">95%</option>
+          <optgroup label="Quality">
+            <option value="60">60%</option>
+            <option value="70">70%</option>
+            <option value="80" selected>80%</option>
+            <option value="90">90%</option>
+          </optgroup>
+          <optgroup label="Max file size">
+            <option value="s100">Under 100 KB</option>
+            <option value="s250">Under 250 KB</option>
+            <option value="s500">Under 500 KB</option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -1198,7 +1199,7 @@
       <div class="setting-row">
         <div>
           <div class="setting-label">Add date</div>
-          <div class="setting-desc">The date the source file was last changed</div>
+          <div class="setting-desc">The date the photo was taken; the file's date when that is unknown</div>
         </div>
         <input type="checkbox" id="setUseDate">
       </div>
@@ -1214,7 +1215,7 @@
       <div class="setting-row">
         <div>
           <div class="setting-label">Add quality</div>
-          <div class="setting-desc">Adds the JPG quality, e.g. q80, before the number</div>
+          <div class="setting-desc">Adds the JPG quality or size limit, e.g. q80 or max250kb, before the number</div>
         </div>
         <input type="checkbox" id="setUseQuality">
       </div>
@@ -1325,7 +1326,7 @@
         <button class="ov-btn" id="edDelete" type="button" disabled>Delete</button>
         <button class="ov-btn" id="edUndo" type="button">↶ Undo</button>
         <button class="ov-btn" id="edRedo" type="button" disabled>↷ Redo</button>
-		<button class="ov-btn" id="edToolMove" type="button" data-tool="move">Move</button>
+        <button class="ov-btn" id="edToolMove" type="button" data-tool="move">Move</button>
         <button class="ov-btn" id="edSize" type="button">Size: M</button>
       </div>
     </div>
@@ -1343,21 +1344,25 @@
   /* ------------------------------------------------------------------ *
    * State
    * ------------------------------------------------------------------ */
-  let selectedFiles = [];          // { id, name, type, file, size, isHeic, el, img, badge, sizeEl }
-  let processedFilesCache = [];
+  /* Each entry: { id, name, type, file, size, src, isHeic, dateMs, dateTaken, el, img, badge, sizeEl,
+     outputBlob, outputInfo, outputFile, failed }. outputBlob is the converted JPEG (kept until the
+     settings or that photo change); outputFile is that blob under its current name. */
+  let selectedFiles = [];
+  let processedFilesCache = [];    // the outputFile of every converted photo, in list order
   let scaleMode = 'percent';       // 'percent' | 'box'
   let currentScale = 0.50;
   let boxLong = 1920;              // 'box' mode: longest-side / shortest-side limits
   let boxShort = 1080;
   let boxTag = '1080p';
-  let currentQuality = 0.80;       // JPEG quality, 0.6 – 1.0
-  const OUTPUT_MIME = 'image/jpeg';
+  let currentQuality = 0.80;       // JPEG quality, 0.6 – 1.0 (ignored when a max file size is chosen)
+  let maxOutputBytes = 0;          // > 0: each output must stay under this many bytes
+  const OUTPUT_MIME = 'image/jpeg';   // output is always JPEG
+  const OUTPUT_EXT = 'jpg';
   let thumbObjectUrls = [];
-  let isProcessed = false;
   let totalOriginalSize = 0;
   let fileIdSeq = 0;
   let isBusy = false;
-  let conversionHasRun = false;
+  let pendingAdds = 0;             // addFiles calls still reading files; no resize / ZIP until they finish
   let conversionLogEntries = [];
   let conversionLogHasErrors = false;
   let conversionLogHasWarnings = false;
@@ -1378,7 +1383,7 @@
   let naming = Object.assign({}, DEFAULT_NAMING);
 
   const HEIC_DECODE_TIMEOUT_MS = 30000;
-  const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|avif|heic|heif|tiff?|jfif)$/i;
+  const IMAGE_EXT_RE = /\.(jpe?g|jpe|png|gif|webp|bmp|avif|heic|heif|hif|tiff?|jfif)$/i;
 
   /* ------------------------------------------------------------------ *
    * Elements
@@ -1542,10 +1547,24 @@
     if (shouldInvalidate) invalidateProcessedCache();
   }
 
+  /* "80" = JPEG quality 80 %; "s250" = the highest quality that stays under 250 KB. */
   function applyQualityChoice(shouldInvalidate = true) {
-    const q = parseInt(qualitySelect.value, 10);
-    currentQuality = (isFinite(q) && q >= 1 && q <= 100 ? q : 80) / 100;
+    const v = qualitySelect.value;
+    if (v.charAt(0) === 's') {
+      const kb = parseInt(v.slice(1), 10);
+      maxOutputBytes = (isFinite(kb) && kb > 0 ? kb : 250) * 1024;
+    } else {
+      const q = parseInt(v, 10);
+      maxOutputBytes = 0;
+      currentQuality = (isFinite(q) && q >= 1 && q <= 100 ? q : 80) / 100;
+    }
     if (shouldInvalidate) invalidateProcessedCache();
+  }
+
+  function qualityDescription() {
+    return maxOutputBytes > 0
+      ? `Under ${Math.round(maxOutputBytes / 1024)} KB per image`
+      : `Quality ${Math.round(currentQuality * 100)}%`;
   }
 
   /* Pure sizing calculation; the same function is injected into Web Workers. */
@@ -1565,6 +1584,11 @@
     };
   }
 
+  /* The current size choice, in the shape computeTarget expects. */
+  function sizeSettings() {
+    return { scaleMode: scaleMode, scale: currentScale, boxLong: boxLong, boxShort: boxShort };
+  }
+
   function sizeTag() {
     return scaleMode === 'box' ? boxTag : `${Math.round(currentScale * 100)}pct`;
   }
@@ -1577,8 +1601,6 @@
     if (raw) {
       try { naming = Object.assign({}, DEFAULT_NAMING, JSON.parse(raw)); }
       catch (e) { naming = Object.assign({}, DEFAULT_NAMING); }
-      // Settings saved by older versions: the number options no longer exist.
-      delete naming.useIndex; delete naming.start; delete naming.digits;
     }
     writeNamingToForm();
   }
@@ -1595,6 +1617,7 @@
   }
 
   function readNamingFromForm() {
+    const exifWas = naming.stripExif;
     naming = {
       prefix: document.getElementById('setPrefix').value.trim(),
       suffix: document.getElementById('setSuffix').value.trim(),
@@ -1602,11 +1625,14 @@
       useDate: document.getElementById('setUseDate').checked,
       useQuality: document.getElementById('setUseQuality').checked,
       stripExif: document.getElementById('setStripExif').checked,
-      sep: document.getElementById('setSep').value || '_'
+      sep: document.getElementById('setSep').value.trim() ? document.getElementById('setSep').value : '_'
     };
     store('qs_naming', naming);
     updateNamePreview();
-    invalidateProcessedCache();
+    // EXIF changes the file contents, so everything is converted again. Names alone do not:
+    // converted photos are just renamed.
+    if (naming.stripExif !== exifWas) invalidateProcessedCache();
+    else outputsChanged();
   }
 
   function sanitizeNamePart(str) {
@@ -1620,17 +1646,19 @@
   }
 
   function qualityTag() {
-    return `q${Math.round(currentQuality * 100)}`;
+    return maxOutputBytes > 0
+      ? `max${Math.round(maxOutputBytes / 1024)}kb`
+      : `q${Math.round(currentQuality * 100)}`;
   }
 
   /* A batch of 2 or more always gets a number, counting up from 1. The digit count follows the
      size of the batch (9 -> 1 digit, 22 -> 2 digits, 111 -> 3 digits). A single image gets none. */
-  function buildFileName(baseName, lastModified, position, ext, total) {
+  function buildFileName(baseName, dateMs, position, ext, total) {
     if (total === undefined) total = selectedFiles.length;
     const parts = [];
     if (naming.prefix) parts.push(sanitizeNamePart(naming.prefix));
     if (naming.keepName) parts.push(sanitizeNamePart(baseName));
-    if (naming.useDate) parts.push(dateStamp(lastModified));
+    if (naming.useDate) parts.push(dateStamp(dateMs));
     if (naming.suffix) parts.push(sanitizeNamePart(naming.suffix));
     if (naming.useQuality) parts.push(qualityTag());
     if (total > 1) {
@@ -1659,8 +1687,8 @@
     const a = selectedFiles[0], b = selectedFiles[1] || a;
     const baseA = a ? stripExt(a.name) : 'photo';
     const baseB = b ? stripExt(b.name) : 'sunset';
-    const whenA = a ? a.file.lastModified : Date.now();
-    const whenB = b ? b.file.lastModified : Date.now();
+    const whenA = a ? a.dateMs : Date.now();
+    const whenB = b ? b.dateMs : Date.now();
     const total = Math.max(n, 2);                      // with no photos yet, show a batch of two
     const first = buildFileName(baseA, whenA, 0, 'jpg', n === 1 ? 1 : total);
     namePreview.innerHTML = n === 1
@@ -1671,11 +1699,15 @@
   /* ------------------------------------------------------------------ *
    * EXIF: canvas re-encoding drops it. When the person unticks "Remove EXIF data",
    * the original JPEG's EXIF block is copied into the output, with the rotation tag
-   * reset (the pixels are already upright) and the embedded thumbnail blanked
-   * (it would still show an uncropped picture).
+   * reset (the pixels are already upright), the embedded thumbnail blanked
+   * (it would still show an uncropped picture) and the pixel size set to the output's.
    * ------------------------------------------------------------------ */
   async function readJpegExifSegment(blob) {
-    const head = new Uint8Array(await blob.slice(0, 262144).arrayBuffer());
+    return findJpegExifSegment(new Uint8Array(await blob.slice(0, 262144).arrayBuffer()));
+  }
+
+  /* The APP1 "Exif" segment (marker included) from the start of a JPEG, as a copy, or null. */
+  function findJpegExifSegment(head) {
     if (head[0] !== 0xFF || head[1] !== 0xD8) return null;
     let o = 2;
     while (o + 4 <= head.length) {
@@ -1696,7 +1728,181 @@
     return null;
   }
 
-  function sanitizeExifSegment(seg) {
+  /* ------------------------------------------------------------------ *
+   * Date taken: EXIF DateTimeOriginal, then CreateDate, then DateTime, read from
+   * JPEG, HEIC / AVIF, WebP and PNG. Anything missing or unreadable returns null,
+   * and the caller falls back to the file's own date.
+   * ------------------------------------------------------------------ */
+  function parseExifDate(s) {
+    const m = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(s || '');
+    if (!m) return null;
+    const y = +m[1], mo = +m[2], d = +m[3], hh = +m[4], mi = +m[5], ss = +m[6];
+    if (y < 1900 || mo < 1 || mo > 12 || d < 1 || d > 31 || hh > 23 || mi > 59 || ss > 60) return null;   // e.g. "0000:00:00"
+    const t = new Date(y, mo - 1, d, hh, mi, ss).getTime();     // EXIF dates are local time
+    return isFinite(t) ? t : null;
+  }
+
+  /* b: bytes ending where the EXIF data ends; T: where its TIFF header starts. */
+  function exifDateFromTiff(b, T) {
+    const end = b.length;
+    if (T < 0 || T + 8 > end) return null;
+    const le = b[T] === 0x49 && b[T + 1] === 0x49;
+    const be = b[T] === 0x4D && b[T + 1] === 0x4D;
+    if (!le && !be) return null;
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    const r16 = (p) => dv.getUint16(p, le), r32 = (p) => dv.getUint32(p, le);
+    const readIfd = (off) => {                         // tag -> position of its 12-byte entry
+      const p = T + off;
+      if (!off || p + 2 > end) return null;
+      const n = r16(p);
+      if (p + 2 + n * 12 > end) return null;
+      const tags = {};
+      for (let i = 0; i < n; i++) tags[r16(p + 2 + i * 12)] = p + 2 + i * 12;
+      return tags;
+    };
+    const ascii = (e) => {                             // "YYYY:MM:DD HH:MM:SS" (ASCII, 20 bytes with NUL)
+      if (r16(e + 2) !== 2 || r32(e + 4) < 19) return null;
+      const at = r32(e + 4) <= 4 ? e + 8 : T + r32(e + 8);
+      if (at + 19 > end) return null;
+      return String.fromCharCode.apply(null, b.subarray(at, at + 19));
+    };
+    const ifd0 = readIfd(r32(T + 4));
+    if (!ifd0) return null;
+    const exif = ifd0[0x8769] !== undefined ? readIfd(r32(ifd0[0x8769] + 8)) : null;
+    const entries = [exif && exif[0x9003], exif && exif[0x9004], ifd0[0x0132]];   // taken, digitised, changed
+    for (const e of entries) {
+      if (e === undefined || e === null) continue;
+      const ms = parseExifDate(ascii(e));
+      if (ms !== null) return ms;
+    }
+    return null;
+  }
+
+  /* HEIC / AVIF: the EXIF block is an item named 'Exif' in the 'meta' box, located through 'iloc'. */
+  function heifExifDate(b) {
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    const u16 = (p) => dv.getUint16(p), u32 = (p) => dv.getUint32(p);
+    const fourcc = (p) => String.fromCharCode(b[p], b[p + 1], b[p + 2], b[p + 3]);
+    const eachBox = (start, end, fn) => {
+      let p = start;
+      while (p + 8 <= end) {
+        let size = u32(p), hdr = 8;
+        if (size === 1) { if (p + 16 > end) return; size = u32(p + 8) * 4294967296 + u32(p + 12); hdr = 16; }
+        else if (size === 0) size = end - p;
+        if (size < hdr || p + size > end) return;
+        if (fn(fourcc(p + 4), p + hdr, p + size) === false) return;
+        p += size;
+      }
+    };
+    let meta = null;
+    eachBox(0, b.length, (t, s, e) => { if (t === 'meta') { meta = [s + 4, e]; return false; } return true; });
+    if (!meta) return null;
+    let exifId = null, iloc = null;
+    eachBox(meta[0], meta[1], (t, s, e) => {
+      if (t === 'iinf') {
+        eachBox(s + (b[s] === 0 ? 6 : 8), e, (t2, s2) => {
+          if (t2 !== 'infe' || b[s2] < 2) return true;
+          const v3 = b[s2] >= 3;
+          const id = v3 ? u32(s2 + 4) : u16(s2 + 4);
+          if (fourcc(s2 + 4 + (v3 ? 4 : 2) + 2) === 'Exif') exifId = id;
+          return true;
+        });
+      } else if (t === 'iloc') iloc = [s, e];
+      return true;
+    });
+    if (exifId === null || !iloc) return null;
+    let p = iloc[0];
+    const ver = b[p];
+    p += 4;
+    const offSize = b[p] >> 4, lenSize = b[p] & 15, baseSize = b[p + 1] >> 4;
+    const idxSize = (ver === 1 || ver === 2) ? (b[p + 1] & 15) : 0;
+    p += 2;
+    const readN = (n) => { let v = 0; for (let i = 0; i < n; i++) v = v * 256 + b[p++]; return v; };
+    const count = ver < 2 ? readN(2) : readN(4);
+    for (let i = 0; i < count && p < iloc[1]; i++) {
+      const id = ver < 2 ? readN(2) : readN(4);
+      const method = (ver === 1 || ver === 2) ? (readN(2) & 15) : 0;
+      readN(2);                                        // data_reference_index
+      const base = readN(baseSize);
+      const extents = readN(2);
+      let first = null;
+      for (let x = 0; x < extents; x++) {
+        if (idxSize) readN(idxSize);
+        const off = readN(offSize), len = readN(lenSize);
+        if (!first) first = [off, len];
+      }
+      if (id !== exifId) continue;
+      if (method !== 0 || !first) return null;         // only items stored at a plain file offset
+      const start = base + first[0], stop = Math.min(b.length, start + first[1]);
+      if (start + 4 > stop) return null;
+      return exifDateFromTiff(b.subarray(0, stop), start + 4 + u32(start));   // u32: offset to the TIFF header
+    }
+    return null;
+  }
+
+  function webpExifDate(b) {                           // RIFF chunk 'EXIF'
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    let p = 12;
+    while (p + 8 <= b.length) {
+      const size = dv.getUint32(p + 4, true);
+      if (String.fromCharCode(b[p], b[p + 1], b[p + 2], b[p + 3]) === 'EXIF') {
+        const s = p + 8, e = Math.min(b.length, s + size);
+        const exifHdr = b[s] === 0x45 && b[s + 1] === 0x78 && b[s + 2] === 0x69 && b[s + 3] === 0x66;
+        return exifDateFromTiff(b.subarray(0, e), exifHdr ? s + 6 : s);
+      }
+      p += 8 + size + (size & 1);
+    }
+    return null;
+  }
+
+  function pngExifDate(b) {                            // chunk 'eXIf'
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    let p = 8;
+    while (p + 12 <= b.length) {
+      const len = dv.getUint32(p), type = String.fromCharCode(b[p + 4], b[p + 5], b[p + 6], b[p + 7]);
+      if (type === 'eXIf') return exifDateFromTiff(b.subarray(0, Math.min(b.length, p + 8 + len)), p + 8);
+      if (type === 'IDAT' || type === 'IEND') return null;   // eXIf must come before the image data
+      p += 12 + len;
+    }
+    return null;
+  }
+
+  /* Date taken in ms, or null. kind: the sniffed format. Never throws. */
+  function readDateTaken(buffer, kind) {
+    try {
+      const b = new Uint8Array(buffer);
+      if (kind === 'jpeg') {
+        const seg = findJpegExifSegment(b.subarray(0, 262144));
+        return seg ? exifDateFromTiff(seg, 10) : null;
+      }
+      if (kind === 'heic' || kind === 'avif') return heifExifDate(b);
+      if (kind === 'webp') return webpExifDate(b);
+      if (kind === 'png') return pngExifDate(b);
+    } catch (err) {
+      console.warn('Could not read the date taken', err);
+    }
+    return null;
+  }
+
+  /* Width and height from a JPEG's SOF header, or null. */
+  function jpegDimensions(bytes) {
+    let o = 2;
+    while (o + 9 < bytes.length) {
+      if (bytes[o] !== 0xFF) return null;
+      const m = bytes[o + 1];
+      if (m === 0xFF) { o++; continue; }
+      if (m === 0xD9 || m === 0xDA) return null;
+      if (m === 0x01 || (m >= 0xD0 && m <= 0xD7)) { o += 2; continue; }
+      if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) {
+        return { h: (bytes[o + 5] << 8) | bytes[o + 6], w: (bytes[o + 7] << 8) | bytes[o + 8] };
+      }
+      o += 2 + ((bytes[o + 2] << 8) | bytes[o + 3]);
+    }
+    return null;
+  }
+
+  /* dims: the output's real size, written into PixelXDimension / PixelYDimension. */
+  function sanitizeExifSegment(seg, dims) {
     const T = 10;                                       // TIFF header starts after FFE1 + length + "Exif\0\0"
     const end = seg.length;
     if (end < T + 8) return null;
@@ -1709,9 +1915,33 @@
     if (ifd0 + 2 > end) return null;
     const n0 = r16(ifd0);
     if (ifd0 + 2 + n0 * 12 + 4 > end) return null;
+    let exifIfdOff = 0;
     for (let i = 0; i < n0; i++) {
-      const e = ifd0 + 2 + i * 12;
-      if (r16(e) === 0x0112) dv.setUint16(e + 8, 1, le);   // Orientation -> upright
+      const e = ifd0 + 2 + i * 12, tag = r16(e);
+      if (tag === 0x0112) dv.setUint16(e + 8, 1, le);   // Orientation -> upright
+      else if (tag === 0x8769) exifIfdOff = r32(e + 8); // pointer to the Exif sub-IFD
+    }
+    if (exifIfdOff && dims) {
+      const ifd = T + exifIfdOff;
+      if (ifd + 2 <= end) {
+        const n = r16(ifd);
+        if (ifd + 2 + n * 12 <= end) {
+          for (let i = 0; i < n; i++) {
+            const e = ifd + 2 + i * 12, tag = r16(e);
+            if (tag !== 0xA002 && tag !== 0xA003) continue;
+            const v = tag === 0xA002 ? dims.w : dims.h;
+            // One value, stored inline: SHORT or LONG. A SHORT that is too small becomes a LONG.
+            if (r16(e + 2) === 3 && v <= 0xFFFF) {
+              dv.setUint16(e + 8, v, le);
+              dv.setUint16(e + 10, 0, le);
+            } else {
+              dv.setUint16(e + 2, 4, le);
+              dv.setUint32(e + 4, 1, le);
+              dv.setUint32(e + 8, v, le);
+            }
+          }
+        }
+      }
     }
     const nextPos = ifd0 + 2 + n0 * 12;
     const ifd1Off = r32(nextPos);
@@ -1737,13 +1967,14 @@
     if (naming.stripExif || !fileObj || fileObj.kind !== 'jpeg') return blob;
     try {
       const raw = await readJpegExifSegment(fileObj.src);
-      const seg = raw && sanitizeExifSegment(raw);
-      if (!seg) return blob;
+      if (!raw) return blob;
       const out = new Uint8Array(await blob.arrayBuffer());
       if (out[0] !== 0xFF || out[1] !== 0xD8) return blob;
+      const seg = sanitizeExifSegment(raw, jpegDimensions(out));
+      if (!seg) return blob;
       let at = 2;
       if (out[2] === 0xFF && out[3] === 0xE0) at = 4 + ((out[4] << 8) | out[5]);   // keep the JFIF header first
-      return new Blob([out.subarray(0, at), seg, out.subarray(at)], { type: blob.type || OUTPUT_MIME });
+      return new Blob([out.subarray(0, at), seg, out.subarray(at)], { type: OUTPUT_MIME });
     } catch (err) {
       console.warn('Could not keep EXIF for', fileObj.name, err);
       return blob;
@@ -1755,44 +1986,46 @@
     return dot > 0 ? name.slice(0, dot) : name;
   }
 
-  function extFromMime(mime) {
-    let ext = (mime || '').split('/')[1] || 'jpg';
-    ext = ext.split('+')[0];
-    if (ext === 'jpeg') ext = 'jpg';
-    return ext;
-  }
 
   /* ------------------------------------------------------------------ *
    * Thumbnail meta bar (format + size) colour coding
    * ------------------------------------------------------------------ */
   /* Before conversion: white for HEIC, lime for every other format. */
-  function resetThumbBadges() {
-    selectedFiles.forEach(f => {
-      if (!f.el) return;
-      f.el.classList.remove('is-failed');
-      if (f.badge) {
-        f.badge.textContent = f.noPreview ? 'NO PREVIEW' : (f.extLabel || '');
-        f.badge.className = 'thumb-ext ' +
-          (f.noPreview ? 'is-failed' : (f.isHeic ? 'is-heic' : 'is-other'));
-      }
-      if (f.sizeEl) {
-        f.sizeEl.textContent = f.origSizeLabel;
-        f.sizeEl.className = 'thumb-size';
-      }
-    });
+  function resetThumbBadge(f) {
+    if (!f.el) return;
+    f.el.classList.remove('is-failed');
+    if (f.badge) {
+      f.badge.textContent = f.noPreview ? 'NO PREVIEW' : (f.extLabel || '');
+      f.badge.className = 'thumb-ext ' +
+        (f.noPreview ? 'is-failed' : (f.isHeic ? 'is-heic' : 'is-other'));
+    }
+    if (f.sizeEl) {
+      f.sizeEl.textContent = f.origSizeLabel;
+      f.sizeEl.className = 'thumb-size';
+    }
   }
 
-  /* After conversion: accent blue, and the label shows the format actually produced. */
-  function markThumbConverted(fileObj, outFile) {
-    fileObj.outputFile = outFile;
-    const mime = (outFile && outFile.type) || '';
-    const label = mime ? extFromMime(mime) : (fileObj.extLabel || 'img');
+  /* After conversion: lime, labelled with the output format. */
+  function markThumbConverted(fileObj) {
+    if (fileObj.el) fileObj.el.classList.remove('is-failed');
     if (fileObj.badge) {
-      fileObj.badge.textContent = label;
+      fileObj.badge.textContent = OUTPUT_EXT;
       fileObj.badge.className = 'thumb-ext is-converted';
     }
     if (fileObj.sizeEl) {
-      fileObj.sizeEl.textContent = `${fileObj.origSizeLabel} > ${formatBytes(outFile.size)}`;
+      fileObj.sizeEl.textContent = `${fileObj.origSizeLabel} > ${formatBytes(fileObj.outputBlob.size)}`;
+      fileObj.sizeEl.className = 'thumb-size';
+    }
+  }
+
+  function markThumbFailed(fileObj) {
+    if (fileObj.el) fileObj.el.classList.add('is-failed');
+    if (fileObj.badge) {
+      fileObj.badge.textContent = 'FAILED';
+      fileObj.badge.className = 'thumb-ext is-failed';
+    }
+    if (fileObj.sizeEl) {
+      fileObj.sizeEl.textContent = fileObj.origSizeLabel;
       fileObj.sizeEl.className = 'thumb-size';
     }
   }
@@ -1807,18 +2040,24 @@
       'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" fill="%232c2c2e"><rect width="120" height="120"/></svg>';
   }
 
-  async function refreshOutputThumbnail(fileObj, outFile) {
-    if (!fileObj.img || !fileObj.el || !fileObj.el.isConnected) return;
+  /* Converted thumbnails are made one at a time: each one decodes a full converted image. */
+  let outThumbChain = Promise.resolve();
+  function queueOutputThumbnail(fileObj, outBlob) {
+    outThumbChain = outThumbChain.then(() => refreshOutputThumbnail(fileObj, outBlob)).catch(() => {});
+  }
+
+  async function refreshOutputThumbnail(fileObj, outBlob) {
+    // Skip work that went stale while waiting in the queue (settings changed, file removed).
+    if (fileObj.outputBlob !== outBlob || !fileObj.img || !fileObj.el || !fileObj.el.isConnected) return;
     let url;
     let bmp = null;
     try {
-      bmp = await bitmapFromBlob(outFile);
+      bmp = await bitmapFromBlob(outBlob);
       const scale = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
       const canvas = paintToCanvas(
         bmp,
         Math.max(1, Math.round(bmp.width * scale)),
-        Math.max(1, Math.round(bmp.height * scale)),
-        true
+        Math.max(1, Math.round(bmp.height * scale))
       );
       bmp.close();
       bmp = null;
@@ -1827,9 +2066,9 @@
       url = URL.createObjectURL(blob);
     } catch (err) {
       if (bmp && bmp.close) bmp.close();
-      url = URL.createObjectURL(outFile);
+      url = URL.createObjectURL(outBlob);
     }
-    if (fileObj.outputFile !== outFile || !fileObj.el || !fileObj.el.isConnected) {
+    if (fileObj.outputBlob !== outBlob || !fileObj.el || !fileObj.el.isConnected) {
       URL.revokeObjectURL(url);
       return;
     }
@@ -1868,8 +2107,8 @@
       const size = Math.min((((buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3]) >>> 0) || 32, buf.length);
       const brands = [major];
       for (let i = 16; i + 4 <= size; i += 4) brands.push(asc(i, i + 4));
-	  if (brands.some(b => b === 'avif' || b === 'avis')) return { kind: 'avif', mime: 'image/avif' };
-	  if (brands.some(b => HEIC_BRANDS.has(b))) return { kind: 'heic', mime: 'image/heic' };
+      if (brands.some(b => b === 'avif' || b === 'avis')) return { kind: 'avif', mime: 'image/avif' };
+      if (brands.some(b => HEIC_BRANDS.has(b))) return { kind: 'heic', mime: 'image/heic' };
     }
     return { kind: 'unknown', mime: '' };   // BMP, TIFF, etc.: fall back to name / MIME type
   }
@@ -1978,11 +2217,47 @@
     }
   }
 
+  /* While files are still being read, RESIZE / ZIP stay blocked, so a run can never start with
+     part of the batch and then have the rest (and an invalidation) land in the middle of it. */
   async function addFiles(fileList) {
+    if (isBusy) return;
     const incoming = Array.from(fileList || []).filter(looksLikeImage);   // snapshot before any await
     if (incoming.length === 0) return;
+    pendingAdds++;
+    actionButton.disabled = true;
+    try {
+      await addFilesNow(incoming);
+    } finally {
+      pendingAdds--;
+      updateActionUI();
+    }
+  }
 
-    // Copy every file's bytes into memory right away. After this the page never has to
+  /* Files are read ADD_BATCH_SIZE at a time, so a big selection never has every original
+     (plus its in-memory copy) loaded at once. Each batch shows up in the grid as it finishes. */
+  const ADD_BATCH_SIZE = 30;
+
+  function isDuplicateFile(rawFile) {
+    return selectedFiles.some(f =>
+      f.name === rawFile.name && f.size === rawFile.size && f.file.lastModified === rawFile.lastModified);
+  }
+
+  async function addFilesNow(incoming) {
+    for (let start = 0; start < incoming.length; start += ADD_BATCH_SIZE) {
+      const batch = incoming.slice(start, start + ADD_BATCH_SIZE).filter(f => !isDuplicateFile(f));
+      if (!batch.length) continue;
+      const added = await addFileBatch(batch);
+      if (added > 0) {
+        recalcOriginalSize();
+        updateSelectionUI();
+        outputsChanged();                    // photos converted earlier are kept; only names may shift
+        updateNamePreview();
+      }
+    }
+  }
+
+  async function addFileBatch(incoming) {
+    // Copy each file's bytes into memory right away. After this the page never has to
     // touch the original file handle again, so a cleared <input>, a cloud-synced or
     // since-modified file, or revoked permissions can no longer break conversion later.
     const buffers = await Promise.all(incoming.map(f =>
@@ -2002,13 +2277,11 @@
 
     let added = 0;
     incoming.forEach((rawFile, k) => {
-      const duplicate = selectedFiles.some(f =>
-        f.name === rawFile.name && f.size === rawFile.size && f.file.lastModified === rawFile.lastModified);
-      if (duplicate) return;
+      if (isDuplicateFile(rawFile)) return;      // e.g. the same file twice in one selection
 
       const s = sniffed[k];
       const lower = rawFile.name.toLowerCase();
-      const legacyHeic = lower.endsWith('.heic') || lower.endsWith('.heif') ||
+      const legacyHeic = lower.endsWith('.heic') || lower.endsWith('.heif') || lower.endsWith('.hif') ||
         /image\/hei[cf]/.test(rawFile.type || '');
       // Known signature wins; only unrecognised files fall back to the name / MIME guess.
       const isHeic = s.kind === 'unknown' ? legacyHeic : s.kind === 'heic';
@@ -2025,6 +2298,7 @@
       const patched = !!(prepared && prepared.patched);
       const decodedWithoutRepair = !!(prepared && prepared.originalDecoded);
       const src = prepared ? prepared.source : (buf ? new Blob([buf], { type: type || '' }) : rawFile);
+      const taken = buf ? readDateTaken(buf, s.kind) : null;
       buffers[k] = null;
 
       const fileObj = {
@@ -2046,19 +2320,19 @@
         jpegMissingEOI: missingEOI,
         jpegDecodedWithoutRepair: decodedWithoutRepair,
         patchedOnLoad: patched,
-        isHeic: isHeic
+        isHeic: isHeic,
+        dateMs: taken !== null ? taken : rawFile.lastModified,   // for "Add date"
+        dateTaken: taken !== null,
+        outputBlob: null,
+        outputInfo: null,
+        outputFile: null,
+        failed: false
       };
       selectedFiles.push(fileObj);
       renderThumb(fileObj);
       added++;
     });
-
-    if (added > 0) {
-      recalcOriginalSize();
-      updateSelectionUI();
-      invalidateProcessedCache();
-      updateNamePreview();
-    }
+    return added;
   }
 
   function renderThumb(fileObj) {
@@ -2148,7 +2422,7 @@
     try {
       const bmp = await bitmapFromBlob(fileObj.src);
       const s = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
-      const c = paintToCanvas(bmp, Math.max(1, Math.round(bmp.width * s)), Math.max(1, Math.round(bmp.height * s)), true);
+      const c = paintToCanvas(bmp, Math.max(1, Math.round(bmp.width * s)), Math.max(1, Math.round(bmp.height * s)));
       bmp.close();
       const blob = await canvasToBlob(c, 'image/jpeg', 0.7);
       c.width = 0; c.height = 0;
@@ -2167,13 +2441,18 @@
     if (index === -1) return;
     const [removed] = selectedFiles.splice(index, 1);
     if (removed.el && removed.el.parentNode) removed.el.parentNode.removeChild(removed.el);
+    // Free its thumbnails now rather than at the next RESET.
+    const urls = [removed.baseThumb, removed.editThumbUrl, removed.outputThumbUrl].filter(Boolean);
+    urls.forEach(url => URL.revokeObjectURL(url));
+    thumbObjectUrls = thumbObjectUrls.filter(url => urls.indexOf(url) === -1);
+    removed.el = null;
 
     recalcOriginalSize();
     if (selectedFiles.length === 0) {
       clearSelection();
     } else {
       updateSelectionUI();
-      invalidateProcessedCache();
+      outputsChanged();                      // the others keep their conversion; numbering closes up
       updateNamePreview();
     }
   }
@@ -2187,42 +2466,98 @@
     previewTitle.textContent = `Preview (${n})`;
     emptyState.style.display = n ? 'none' : 'block';
     thumbGrid.style.display = n ? 'grid' : 'none';
-    actionButton.disabled = n === 0;
+    actionButton.disabled = n === 0 || pendingAdds > 0;
   }
 
-  function invalidateProcessedCache() {
-    /* Settings changed, so any converted previews, results and run log are stale. */
-    isProcessed = false;
-    conversionHasRun = false;
-    selectedFiles.forEach(fileObj => {
-      fileObj.outputFile = null;
-      fileObj.converted = false;
-      clearOutputThumbnail(fileObj);
-    });
-    resetConversionLog();
+  /* Gives every converted photo its file name for the current list, in list order.
+     Names depend on the position, the list length and the naming settings, so this runs
+     after adding, removing, renaming or converting; the JPEG data itself is reused. */
+  function rebuildOutputs() {
+    const used = new Set();
+    const total = selectedFiles.length;
     processedFilesCache = [];
+    selectedFiles.forEach((f, i) => {
+      if (!f.outputBlob) { f.outputFile = null; return; }
+      const name = makeUnique(buildFileName(stripExt(f.name), f.dateMs, i, OUTPUT_EXT, total), used);
+      if (!f.outputFile || f.outputFile.name !== name || f.outputFileBlob !== f.outputBlob) {
+        f.outputFile = new File([f.outputBlob], name, { type: OUTPUT_MIME });
+        f.outputFileBlob = f.outputBlob;
+      }
+      processedFilesCache.push(f.outputFile);
+    });
     shareOffset = 0;
-    singleActionContainer.style.display = 'block';
-    dualActionContainer.style.display = 'none';
+  }
+
+  /* Which button(s) to show:
+     - photos not converted yet (new, edited, or nothing done) -> RESIZE / UPDATE N
+     - only failed photos left, and nothing converted          -> RETRY N
+     - otherwise                                               -> ZIP / SHARE (failed ones left out) */
+  function updateActionUI() {
+    const n = selectedFiles.length;
+    const done = selectedFiles.filter(f => f.outputBlob);
+    const todo = selectedFiles.filter(f => !f.outputBlob);
+    const untried = todo.filter(f => !f.failed);
     actionButton.classList.remove('ready-state');
-    resetThumbBadges();
-    if (selectedFiles.length > 0) {
-      actionButton.disabled = false;
-      actionButton.textContent = `RESIZE ${selectedFiles.length} IMAGE${selectedFiles.length === 1 ? '' : 'S'}`;
-      updateSizeStats(totalOriginalSize, null);
-    } else {
+    if (n === 0) {
+      singleActionContainer.style.display = 'block';
+      dualActionContainer.style.display = 'none';
       actionButton.disabled = true;
       actionButton.textContent = 'SELECT IMAGES FIRST';
       updateSizeStats(0);
+      return;
+    }
+    if (untried.length || !done.length) {
+      const word = `${todo.length} IMAGE${todo.length === 1 ? '' : 'S'}`;
+      singleActionContainer.style.display = 'block';
+      dualActionContainer.style.display = 'none';
+      actionButton.disabled = pendingAdds > 0;
+      actionButton.textContent = !done.length ? (untried.length ? `RESIZE ${word}` : `RETRY ${word}`) : `UPDATE ${word}`;
+    } else {
+      singleActionContainer.style.display = 'none';
+      dualActionContainer.style.display = 'grid';
+      updateShareButtonLabel();
+    }
+    if (done.length) {
+      updateSizeStats(done.reduce((acc, f) => acc + f.size, 0), done.reduce((acc, f) => acc + f.outputBlob.size, 0));
+    } else {
+      updateSizeStats(totalOriginalSize, null);
     }
   }
 
-  /* Clears the queue but keeps the user's size, format and naming choices. */
+  /* The list changed (added, removed, renamed) but no conversion became invalid. */
+  function outputsChanged() {
+    rebuildOutputs();
+    updateActionUI();
+  }
+
+  function clearFileOutput(fileObj) {
+    fileObj.outputBlob = null;
+    fileObj.outputInfo = null;
+    fileObj.outputFile = null;
+    fileObj.outputFileBlob = null;
+    fileObj.failed = false;
+    clearOutputThumbnail(fileObj);
+    resetThumbBadge(fileObj);
+  }
+
+  /* One photo changed (it was edited): only that one needs converting again. */
+  function invalidateFile(fileObj) {
+    clearFileOutput(fileObj);
+    outputsChanged();
+  }
+
+  function invalidateProcessedCache() {
+    /* Size, quality or EXIF settings changed, so every conversion and the run log are stale. */
+    selectedFiles.forEach(clearFileOutput);
+    resetConversionLog();
+    outputsChanged();
+  }
+
+  /* Clears the queue but keeps the user's size, quality and naming choices. */
   function clearSelection(shouldInvalidate = true) {
     clearOldThumbUrls();
     selectedFiles = [];
     processedFilesCache = [];
-    isProcessed = false;
     totalOriginalSize = 0;
     fileInput.value = '';
     thumbGrid.innerHTML = '';
@@ -2232,7 +2567,7 @@
     updateNamePreview();
   }
 
-  /* Full reset, including the size and format controls; invalidate once after batching. */
+  /* Full reset, including the size and quality controls; invalidate once after batching. */
   function resetApp() {
     clearSelection(false);
     sizeSelect.value = 'p50';
@@ -2320,18 +2655,16 @@
   }
 
   /*
-   * Paints decoded pixels onto a fresh canvas. `opaque` fills white first so
-   * transparent HEIC/PNG pixels never come out black in a JPEG.
+   * Paints decoded pixels onto a fresh canvas, on white first so transparent
+   * HEIC/PNG pixels never come out black in a JPEG.
    */
-  function paintToCanvas(source, w, h, opaque) {
+  function paintToCanvas(source, w, h) {
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
-    if (opaque) {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, w, h);
-    }
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, w, h);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(source, 0, 0, w, h);
@@ -2390,15 +2723,14 @@
       const scaled = paintToCanvas(
         raw,
         Math.max(1, Math.round(width * scale)),
-        Math.max(1, Math.round(height * scale)),
-        options.opaque !== false
+        Math.max(1, Math.round(height * scale))
       );
       raw.width = 0;
       raw.height = 0;
       return { canvas: scaled, width: scaled.width, height: scaled.height };
     }
-    if (options.opaque) {
-      const opaque = paintToCanvas(raw, width, height, true);
+    if (options.opaque) {                          // flattened onto white (thumbnails go straight to JPEG)
+      const opaque = paintToCanvas(raw, width, height);
       raw.width = 0;
       raw.height = 0;
       return { canvas: opaque, width, height };
@@ -2443,11 +2775,14 @@
 
   const WORKER_BODY = `
   let lib = null;
-  const TIMEOUT = 30000;
 
   function display(im, imageData) {
     return new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('HEIC decode timed out after 30s')), TIMEOUT);
+      const t = setTimeout(() => {
+        const err = new Error('HEIC decode timed out after ' + Math.round(HEIC_TIMEOUT_W / 1000) + 's');
+        err.isTimeout = true;      // the decoder may still be running, so its images must not be freed
+        reject(err);
+      }, HEIC_TIMEOUT_W);
       try {
         im.display(imageData, (r) => {
           clearTimeout(t);
@@ -2459,7 +2794,7 @@
 
   async function decodeHeic(buffer, preferThumb) {
     if (!lib) {
-      // Fetched only when a HEIC file really needs decoding, so JPG / PNG still convert if the CDN is unreachable.
+      // Loaded from vendor/ only when a HEIC file really needs decoding, so JPG / PNG still convert if it is missing.
       importScripts(LIBHEIF_URL_W);
       lib = libheif();
     }
@@ -2474,26 +2809,36 @@
     }
     const w = im.get_width(), h = im.get_height();
     const imageData = new ImageData(w, h);
-    try {
-      await display(im, imageData);
-    } finally {
+    const freeAll = () => {
       try { if (im !== imgs[0]) im.free(); } catch (_) {}
       for (const i of imgs) { try { i.free && i.free(); } catch (_) {} }
+    };
+    try {
+      await display(im, imageData);
+    } catch (err) {
+      if (!err || !err.isTimeout) freeAll();
+      throw err;
     }
+    freeAll();
     const cv = new OffscreenCanvas(w, h);
     cv.getContext('2d').putImageData(imageData, 0, 0);
     return { source: cv, w: w, h: h };
   }
 
-  async function encode(source, w, h, mime, quality, opaque) {
+  const makeCanvasW = (w, h) => new OffscreenCanvas(w, h);
+  const toBlobW = (c, q) => c.convertToBlob({ type: OUTPUT_MIME_W, quality: q });
+
+  /* Scales onto white (JPEG has no alpha); frees the source. */
+  function drawScaled(source, w, h) {
     const out = new OffscreenCanvas(w, h);
     const ctx = out.getContext('2d');
-    if (opaque) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); }
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(source, 0, 0, w, h);
     if (source.close) source.close();
-    return out.convertToBlob({ type: mime, quality: quality });
+    return out;
   }
 
   self.onmessage = async (e) => {
@@ -2503,7 +2848,7 @@
         // full: decode the real image (editor / viewer preview); otherwise use the tiny embedded thumbnail
         const d = await decodeHeic(m.buffer, !m.full);
         const s = Math.min(1, m.size / Math.max(d.w, d.h));
-        const blob = await encode(d.source, Math.max(1, Math.round(d.w * s)), Math.max(1, Math.round(d.h * s)), 'image/jpeg', m.q || 0.7, true);
+        const blob = await toBlobW(drawScaled(d.source, Math.max(1, Math.round(d.w * s)), Math.max(1, Math.round(d.h * s))), m.q || 0.7);
         self.postMessage({ id: m.id, blob: blob });
         return;
       }
@@ -2518,16 +2863,17 @@
       const edit = m.edit || null;
       const cd = cropDims(w, h, edit);
       const t = computeTarget(cd.w, cd.h, m);
-      let blob;
+      let cv;
       if (edit) {
         // crop / perspective / annotations: shared code, injected from the main script
-        const cv = renderEdited(source, w, h, t, edit, (cw, ch) => new OffscreenCanvas(cw, ch));
+        cv = renderEdited(source, w, h, t, edit, makeCanvasW);
         if (source.close) source.close();
-        blob = await cv.convertToBlob({ type: m.outMime, quality: m.quality });
       } else {
-        blob = await encode(source, t.w, t.h, m.outMime, m.quality, m.outMime === 'image/jpeg');
+        cv = drawScaled(source, t.w, t.h);
       }
-      self.postMessage({ id: m.id, blob: blob, w: t.w, h: t.h });
+      const r = await encodeJpegLimited(cv, m.quality, m.maxBytes, toBlobW);
+      cv.width = 0; cv.height = 0;
+      self.postMessage({ id: m.id, blob: r.blob, info: { quality: r.quality, w: t.w, h: t.h, met: r.met } });
     } catch (err) {
       self.postMessage({ id: m.id, error: (err && err.message) ? err.message : String(err) });
     }
@@ -2538,8 +2884,14 @@
   function getWorkerUrl() {
     if (!workerUrl) {
       // The edit functions are written once in this file and copied into the worker as source text.
-      const shared = [computeTarget, cropDims, quadHomography, quadMapPoint, warpQuad, edUnitToQuad, edDrawImageInQuad, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
-      const src = "const LIBHEIF_URL_W = '" + LIBHEIF_URL + "';\n" + shared + "\n" + WORKER_BODY;
+      const shared = [computeTarget, encodeJpegLimited, cropDims, quadHomography, quadMapPoint, warpQuad, edUnitToQuad, edDrawImageInQuad, annoTextLayout, drawAnnotations, renderEdited].map(fn => fn.toString()).join('\n');
+      const consts = 'const LIBHEIF_URL_W = ' + JSON.stringify(LIBHEIF_URL) + ';\n' +
+        'const HEIC_TIMEOUT_W = ' + JSON.stringify(HEIC_DECODE_TIMEOUT_MS) + ';\n' +
+        'const OUTPUT_MIME_W = ' + JSON.stringify(OUTPUT_MIME) + ';\n' +
+        'const ANNO_LW = ' + JSON.stringify(ANNO_LW) + ';\n' +
+        'const ANNO_FS = ' + JSON.stringify(ANNO_FS) + ';\n' +
+        'const ANNO_FONT = ' + JSON.stringify(ANNO_FONT) + ';\n';
+      const src = consts + shared + "\n" + WORKER_BODY;
       workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
     }
     return workerUrl;
@@ -2572,8 +2924,10 @@
         w.cur = i;
         try {
           const job = await makeJob(i);
+          if (w.dead) return;            // crashed while the job was being prepared; already reported
           w.postMessage(job.msg, job.transfer || []);
         } catch (err) {
+          if (w.dead) return;
           w.cur = -1;
           finishOne(i, { error: (err && err.message) || 'Could not read file' });
           pump(w);
@@ -2591,12 +2945,21 @@
         w.onerror = (ev) => {
           if (ev && ev.preventDefault) ev.preventDefault();
           const i = w.cur; w.cur = -1;
-          const idx = workers.indexOf(w);
+          w.dead = true;
           w.terminate();
+          const idx = workers.indexOf(w);
+          if (idx >= 0) workers.splice(idx, 1);
           let nw = null;
-          try { nw = spawn(); if (idx >= 0) workers[idx] = nw; else workers.push(nw); } catch (e) { /* no replacement */ }
-          if (i >= 0) finishOne(i, { error: (ev && ev.message) || 'Worker crashed' });
+          if (!settled) {
+            try { nw = spawn(); workers.push(nw); } catch (e) { /* no replacement */ }
+          }
+          const msg = (ev && ev.message) || 'Worker crashed';
+          if (i >= 0) finishOne(i, { error: msg });
           if (nw) pump(nw);
+          else if (!workers.length) {
+            // No worker left to take the remaining jobs: fail them instead of waiting forever.
+            while (!settled && nextIndex < count) finishOne(nextIndex++, { error: msg });
+          }
         };
         return w;
       };
@@ -2613,14 +2976,29 @@
     });
   }
 
-  async function makeConvertJob(i) {
-    const fileObj = selectedFiles[i];
+  /* The byte limit for the JPEG itself. When EXIF is kept it is added afterwards, so its
+     size comes off the limit first (the finished file must still be under the limit). */
+  async function jpegByteBudget(fileObj) {
+    if (!(maxOutputBytes > 0)) return 0;
+    let reserve = 0;
+    if (!naming.stripExif && fileObj.kind === 'jpeg') {
+      if (fileObj.exifSegLen === undefined) {
+        const seg = await readJpegExifSegment(fileObj.src).catch(() => null);
+        fileObj.exifSegLen = seg ? seg.length : 0;
+      }
+      reserve = fileObj.exifSegLen;
+    }
+    return Math.max(4096, maxOutputBytes - reserve);
+  }
+
+  async function makeConvertJob(fileObj, i) {
+    const maxBytes = await jpegByteBudget(fileObj);
     const buffer = await fileObj.src.arrayBuffer();
     return {
       msg: {
         id: i, op: 'convert', buffer,
-        heic: fileObj.isHeic, mime: fileObj.type, outMime: OUTPUT_MIME,
-        scaleMode, scale: currentScale, boxLong, boxShort, quality: currentQuality,
+        heic: fileObj.isHeic, mime: fileObj.type,
+        scaleMode, scale: currentScale, boxLong, boxShort, quality: currentQuality, maxBytes,
         edit: exportEdit(fileObj)
       },
       transfer: [buffer]
@@ -2717,11 +3095,11 @@
     if (conversionLogHasErrors) {
       logBtn.classList.add('has-errors');
       logBtn.title = conversionLogHasWarnings
-        ? 'Errors occurred; one or more JPEGs were missing an end-of-image marker — open the log'
+        ? 'Errors and warnings — open the log'
         : 'Errors occurred — open the log';
     } else if (conversionLogHasWarnings) {
       logBtn.classList.add('has-warnings');
-      logBtn.title = 'One or more JPEGs were missing an end-of-image marker — open the log';
+      logBtn.title = 'Warnings (a damaged JPEG, or a photo over the size limit) — open the log';
     } else if (conversionLogInProgress) {
       logBtn.title = 'Resize in progress — conversion log';
     } else {
@@ -2760,7 +3138,8 @@
     conversionLogList.replaceChildren();
     const successes = conversionLogEntries.filter(entry => entry.type === 'success').length;
     const errors = conversionLogEntries.filter(entry => entry.type === 'error').length;
-    const jpegWarnings = conversionLogEntries.filter(entry => entry.type === 'warning').length;
+    const jpegWarnings = conversionLogEntries.filter(entry => entry.type === 'warning' && !entry.sizeMiss).length;
+    const sizeMisses = conversionLogEntries.filter(entry => entry.sizeMiss).length;
     const patched = conversionLogEntries.filter(entry => entry.type === 'warning' && entry.patched).length;
 
     if (!conversionLogHasRun) {
@@ -2770,6 +3149,7 @@
       const parts = [`${successes} of ${total} converted`, `${errors} ${errors === 1 ? 'error' : 'errors'}`];
       if (jpegWarnings) parts.push(`${jpegWarnings} JPEG${jpegWarnings === 1 ? '' : 's'} missing an end marker`);
       if (patched) parts.push(`${patched} repaired`);
+      if (sizeMisses) parts.push(`${sizeMisses} over the size limit`);
       conversionLogSummary.textContent = parts.join(' · ');
     }
 
@@ -2820,13 +3200,17 @@
   /* ------------------------------------------------------------------ *
    * Processing
    * ------------------------------------------------------------------ */
+  /* Converts every photo that has no current result: all of them the first time, then only
+     new or edited ones (and earlier failures). Results are kept per photo; names are given
+     afterwards by rebuildOutputs. */
   async function processAllImages() {
-    if (selectedFiles.length === 0 || isBusy) return;
+    if (selectedFiles.length === 0 || isBusy || pendingAdds > 0) return;
+    const jobs = selectedFiles.filter(f => !f.outputBlob);
+    if (jobs.length === 0) return;
     isBusy = true;
-    processedFilesCache = [];
     const failures = [];
-    const usedNames = new Set();
-    const total = selectedFiles.length;
+    const total = jobs.length;
+    const kept = selectedFiles.length - total;
 
     resetConversionLog();
     conversionLogHasRun = true;
@@ -2836,13 +3220,12 @@
     const scaleDescription = scaleMode === 'box'
       ? `${boxTag} max (${boxLong}×${boxShort})`
       : `${Math.round(currentScale * 100)}%`;
-    addConversionLogEntry(
-      'info',
-      'Run settings',
-      `JPEG · ${scaleDescription} · Quality ${Math.round(currentQuality * 100)}%`,
-      -1
-    );
-    selectedFiles.forEach((fileObj, index) => {
+    addConversionLogEntry('info', 'Run settings', `JPEG · ${scaleDescription} · ${qualityDescription()}`, -2);
+    if (kept > 0) {
+      addConversionLogEntry('info', 'Already converted',
+        `${kept} image${kept === 1 ? ' was' : 's were'} converted earlier with these settings and kept as they were.`, -1);
+    }
+    jobs.forEach(fileObj => {
       if (!fileObj.jpegMissingEOI) return;
       let message;
       if (fileObj.patchedOnLoad) {
@@ -2852,10 +3235,10 @@
       } else {
         message = 'The JPEG is missing its end-of-image marker. The original could not be decoded, and appending the marker did not make it decodable.';
       }
-      addConversionLogEntry('warning', fileObj.name, message, index, { patched: !!fileObj.patchedOnLoad });
+      addConversionLogEntry('warning', fileObj.name, message, selectedFiles.indexOf(fileObj), { patched: !!fileObj.patchedOnLoad });
     });
 
-    showProgress('Resizing images…');
+    showProgress(kept > 0 ? `Resizing ${total} more image${total === 1 ? '' : 's'}…` : 'Resizing images…');
     setProgress(0, total);
     await nextFrame();
 
@@ -2866,52 +3249,34 @@
         ? err.message.trim()
         : (typeof err === 'string' ? err : String(err));
       failures.push({ name: fileObj.name, errorName: errorName, message: errorMessage });
-      fileObj.outputFile = null;
+      fileObj.outputBlob = null;
+      fileObj.outputInfo = null;
+      fileObj.failed = true;
       const errorPrefix = errorName && errorName !== 'Error' ? `${errorName}: ` : '';
-      const fileIndex = selectedFiles.indexOf(fileObj);
-      addConversionLogEntry('error', fileObj.name, `${errorPrefix}${errorMessage}`, fileIndex);
+      addConversionLogEntry('error', fileObj.name, `${errorPrefix}${errorMessage}`, selectedFiles.indexOf(fileObj));
       showProgressError(`${failures.length} of ${total} image${total === 1 ? '' : 's'} failed. Open LOG for details.`);
-      if (fileObj.el) fileObj.el.classList.add('is-failed');
-      if (fileObj.badge) {
-        fileObj.badge.textContent = 'FAILED';
-        fileObj.badge.className = 'thumb-ext is-failed';
-      }
-      if (fileObj.sizeEl) {
-        fileObj.sizeEl.textContent = fileObj.origSizeLabel;
-        fileObj.sizeEl.className = 'thumb-size';
-      }
+      markThumbFailed(fileObj);
     };
 
     try {
-      /* A fully failed/aborted prior run can be retried without a settings change. */
-      if (conversionHasRun) {
-        selectedFiles.forEach(f => {
-          f.converted = false;
-          f.outputFile = null;
-          clearOutputThumbnail(f);
-        });
-        resetThumbBadges();
-      }
-
-      const results = new Array(total).fill(null);
+      jobs.forEach(f => { f.failed = false; resetThumbBadge(f); });
+      const results = new Array(total).fill(null);      // { blob, info, exifDone } per job
       let usedWorkers = false;
 
       if (WORKERS_OK) {
         const workerFailed = [];
         try {
           let completed = 0;
-          await runPool(total, POOL_SIZE, makeConvertJob, (i, data) => {
+          await runPool(total, POOL_SIZE, (i) => makeConvertJob(jobs[i], i), (i, data) => {
             if (data.error || !data.blob) workerFailed.push({ i, msg: data.error });
-            else results[i] = { blob: data.blob };
+            else results[i] = { blob: data.blob, info: data.info || null, exifDone: false };
             setProgress(++completed, total);
           });
           usedWorkers = true;
         } catch (err) {
           console.warn('Worker pool unavailable, converting on the main thread', err);
           results.fill(null);
-          failures.length = 0;
           workerFailed.length = 0;
-          resetThumbBadges();   // clear any FAILED marks left by the aborted worker run
         }
 
         // An image a worker could not handle gets up to two more tries on the main thread
@@ -2924,14 +3289,14 @@
             for (let attempt = 0; attempt < 2; attempt++) {
               await nextFrame();
               try {
-                results[item.i] = { file: await convertOne(selectedFiles[item.i], item.i, usedNames) };
+                results[item.i] = await convertOne(jobs[item.i]);
                 lastErr = null;
                 break;
               } catch (err) {
                 lastErr = err;
               }
             }
-            if (lastErr) fail(selectedFiles[item.i], lastErr);
+            if (lastErr) fail(jobs[item.i], lastErr);
           }
         }
       }
@@ -2939,86 +3304,69 @@
       if (!usedWorkers) {
         for (let i = 0; i < total; i++) {
           try {
-            results[i] = { file: await convertOne(selectedFiles[i], i, usedNames) };
+            results[i] = await convertOne(jobs[i]);
           } catch (err) {
-            fail(selectedFiles[i], err);
+            fail(jobs[i], err);
           }
           setProgress(i + 1, total);
           await nextFrame();
         }
       }
 
-      // Name files in selection order so numbering stays predictable.
+      // Store the results; worker output still needs its EXIF.
+      const converted = [];
       for (let i = 0; i < total; i++) {
         const r = results[i];
         if (!r) continue;
-        let outFile;
-        if (r.file) {
-          outFile = r.file;
-        } else {
-          const mime = r.blob.type || OUTPUT_MIME;
-          const name = makeUnique(
-            buildFileName(stripExt(selectedFiles[i].name), selectedFiles[i].file.lastModified, i, extFromMime(mime)),
-            usedNames
-          );
-          const outBlob = await applyExifPolicy(r.blob, selectedFiles[i]);
-          outFile = new File([outBlob], name, { type: mime });
-        }
-        processedFilesCache.push(outFile);
-
-        selectedFiles[i].converted = true;
-        markThumbConverted(selectedFiles[i], outFile);
-        addConversionLogEntry(
-          'success',
-          selectedFiles[i].name,
-          `${outFile.name} ${formatBytes(selectedFiles[i].size)} > ${formatBytes(outFile.size)}`,
-          i
-        );
-        refreshOutputThumbnail(selectedFiles[i], outFile);
+        const f = jobs[i];
+        const blob = r.exifDone ? r.blob : await applyExifPolicy(r.blob, f);
+        f.outputBlob = blob;
+        f.outputInfo = r.info || null;
+        if (f.outputInfo && maxOutputBytes > 0 && blob.size > maxOutputBytes) f.outputInfo.met = false;
+        f.failed = false;
+        markThumbConverted(f);
+        queueOutputThumbnail(f, blob);
+        converted.push(f);
       }
 
-      conversionHasRun = true;
+      rebuildOutputs();                                   // names for the whole list, in list order
+      converted.forEach(f => {
+        const at = selectedFiles.indexOf(f);
+        const info = f.outputInfo;
+        let detail = '';
+        if (info && maxOutputBytes > 0) {
+          detail = ` · ${info.w}×${info.h} · quality ${Math.round(info.quality * 100)}%`;
+        }
+        addConversionLogEntry('success', f.name,
+          `${f.outputFile.name} ${formatBytes(f.size)} > ${formatBytes(f.outputBlob.size)}${detail}`, at);
+        if (info && info.met === false) {
+          addConversionLogEntry('warning', f.name,
+            `Over the limit: still ${formatBytes(f.outputBlob.size)} at the lowest quality (60%), so it does not fit under ${formatBytes(maxOutputBytes)}. The resolution was kept at ${info.w}×${info.h}; choose a lower "New resolution" for a smaller file.`,
+            at, { sizeMiss: true });
+        }
+      });
+
       conversionLogInProgress = false;
       updateLogButton();
-      if (failures.length) {
+      updateActionUI();
+
+      const anyOutput = selectedFiles.some(f => f.outputBlob);
+      if (!anyOutput) {
+        showProgressError(failures.length
+          ? `${total === 1 ? 'The image' : `All ${total} images`} failed. Open LOG for details.`
+          : 'No images were converted. Open LOG for details.');
+      } else if (failures.length) {
         showProgressError(`${failures.length} image${failures.length === 1 ? '' : 's'} could not be converted. Open LOG for details.`);
       }
-      if (processedFilesCache.length === 0) {
-        isProcessed = false;
-        singleActionContainer.style.display = 'block';
-        dualActionContainer.style.display = 'none';
-        actionButton.disabled = false;
-        actionButton.classList.remove('ready-state');
-        actionButton.textContent = `Retry ${total} image${total === 1 ? '' : 's'}`;
-        showProgressError(failures.length
-          ? `All ${total} images failed. Open LOG for details.`
-          : 'No images were converted. Open LOG for details.');
-        await nextFrame();
-        await new Promise(resolve => setTimeout(resolve, 900));
-        hideProgress();
-        return;
-      }
-
-      isProcessed = true;
-      const totalConvertedSize = processedFilesCache.reduce((acc, f) => acc + f.size, 0);
-      const doneOriginal = selectedFiles
-        .filter(f => f.converted)
-        .reduce((acc, f) => acc + f.size, 0);
-      updateSizeStats(doneOriginal, totalConvertedSize);
-
-      singleActionContainer.style.display = 'none';
-      dualActionContainer.style.display = 'grid';
-      shareOffset = 0;
-      updateShareButtonLabel();
-
       await nextFrame();
       if (failures.length) await new Promise(resolve => setTimeout(resolve, 900));
       hideProgress();
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
-      conversionHasRun = true;
       conversionLogInProgress = false;
       addConversionLogEntry('error', 'Resize operation aborted', message);
+      jobs.forEach(f => { if (!f.outputBlob) f.failed = true; });
+      outputsChanged();
       showProgressError('Resize stopped because of an error. Open LOG for details.');
       await nextFrame();
       await new Promise(resolve => setTimeout(resolve, 900));
@@ -3028,12 +3376,10 @@
     }
   }
 
-  async function convertOne(fileObj, position, usedNames) {
+  /* Converts one photo on the page (no worker). Returns { blob, info, exifDone }. */
+  async function convertOne(fileObj) {
     const isHeic = fileObj.isHeic;
-
-    const targetMime = OUTPUT_MIME;
-    const opaque = true;             // JPEG has no alpha: flatten onto white
-    let finalBlob = null;
+    let canvas;
 
     const edit = exportEdit(fileObj);
     if (edit) {
@@ -3048,53 +3394,45 @@
         sw = source.width; sh = source.height;
       }
       const cd = cropDims(sw, sh, edit);
-      const target = computeTarget(cd.w, cd.h, { scaleMode: scaleMode, scale: currentScale, boxLong: boxLong, boxShort: boxShort });
-      const out = renderEdited(source, sw, sh, target, edit, makeMainCanvas);
+      const target = computeTarget(cd.w, cd.h, sizeSettings());
+      canvas = renderEdited(source, sw, sh, target, edit, makeMainCanvas);
       if (source.close) source.close(); else { source.width = 0; source.height = 0; }
-      finalBlob = await canvasToBlob(out, targetMime, currentQuality);
-      out.width = 0; out.height = 0;
     } else if (isHeic) {
       const buffer = await fileObj.src.arrayBuffer();
-      const { canvas, width, height } = await decodeHeicBufferToCanvas(buffer);
-      const target = computeTarget(width, height, { scaleMode: scaleMode, scale: currentScale, boxLong: boxLong, boxShort: boxShort });
-
-      const scaled = paintToCanvas(canvas, target.w, target.h, opaque);
-      finalBlob = await canvasToBlob(scaled, targetMime, currentQuality);
-
-      canvas.width = 0; canvas.height = 0;
-      scaled.width = 0; scaled.height = 0;
+      const d = await decodeHeicBufferToCanvas(buffer);
+      const target = computeTarget(d.width, d.height, sizeSettings());
+      canvas = paintToCanvas(d.canvas, target.w, target.h);
+      d.canvas.width = 0; d.canvas.height = 0;
     } else {
-      const probe = await bitmapFromBlob(fileObj.src);
-      const target = computeTarget(probe.width, probe.height, { scaleMode: scaleMode, scale: currentScale, boxLong: boxLong, boxShort: boxShort });
-      probe.close();
-
-      let bitmap;
+      // Decode once; the high-quality resize then works from the decoded bitmap.
+      const bitmap = await bitmapFromBlob(fileObj.src);
+      const target = computeTarget(bitmap.width, bitmap.height, sizeSettings());
+      let resized = null;
       try {
-        bitmap = await bitmapFromBlob(fileObj.src, {
+        resized = await createImageBitmap(bitmap, {
           resizeWidth: target.w,
           resizeHeight: target.h,
           resizeQuality: 'high'
         });
       } catch (e) {
-        bitmap = await bitmapFromBlob(fileObj.src);
+        resized = null;              // no resize options here: the canvas scales it instead
       }
-
-      const canvas = paintToCanvas(bitmap, target.w, target.h, opaque);
+      canvas = paintToCanvas(resized || bitmap, target.w, target.h);
+      if (resized) resized.close();
       bitmap.close();
-
-      finalBlob = await canvasToBlob(canvas, targetMime, currentQuality);
-      canvas.width = 0; canvas.height = 0;
     }
 
-    if (!finalBlob) throw new Error('The browser could not encode this image.');
-    finalBlob = await applyExifPolicy(finalBlob, fileObj);
-
-    const ext = extFromMime(targetMime);
-    const name = makeUnique(
-      buildFileName(stripExt(fileObj.name), fileObj.file.lastModified, position, ext),
-      usedNames
-    );
-    return new File([finalBlob], name, { type: targetMime });
+    const w = canvas.width, h = canvas.height;
+    let r;
+    try {
+      r = await encodeJpegLimited(canvas, currentQuality, await jpegByteBudget(fileObj),
+        (c, q) => canvasToBlob(c, OUTPUT_MIME, q));
+    } finally {
+      canvas.width = 0; canvas.height = 0;
+    }
+    if (!r || !r.blob) throw new Error('The browser could not encode this image.');
+    const blob = await applyExifPolicy(r.blob, fileObj);
+    return { blob: blob, exifDone: true, info: { quality: r.quality, w: w, h: h, met: r.met } };
   }
 
   function canvasToBlob(canvas, mime, quality) {
@@ -3137,7 +3475,7 @@
   }
 
   async function downloadAllZip() {
-    if (processedFilesCache.length === 0 || isBusy) return;
+    if (processedFilesCache.length === 0 || isBusy || pendingAdds > 0) return;
     if (typeof JSZip !== 'function') {
       const message = 'The ZIP library is not loaded. Reconnect once so it can be cached for offline use.';
       addConversionLogEntry('error', 'ZIP library unavailable', message);
@@ -3161,8 +3499,9 @@
         progressFill.style.width = pct + '%';
         progressLabel.textContent = `${pct}% complete — packing ${processedFilesCache.length} images`;
       });
-      saveBlobAs(zipContent, zipFileName());
-      addConversionLogEntry('info', 'ZIP archive created', `${processedFilesCache.length} converted images packed into ${zipFileName()}.`);
+      const zipName = zipFileName();
+      saveBlobAs(zipContent, zipName);
+      addConversionLogEntry('info', 'ZIP archive created', `${processedFilesCache.length} converted images packed into ${zipName}.`);
     } catch (err) {
       const message = err && err.message ? err.message : String(err);
       addConversionLogEntry('error', 'ZIP archive could not be built', message);
@@ -3197,23 +3536,45 @@
    * Android refuses a share with NotAllowedError once the payload gets big —
    * it is a limit on the handover, not on this app. When that happens we drop
    * to sending a slice at a time; each tap is its own gesture, which is what
-   * the share sheet requires. The slice size is remembered for next time.
+   * the share sheet requires. The slice size is remembered for next time, together
+   * with the size in bytes of the share that was refused: a later batch smaller
+   * than that goes in one go again. RESET forgets both.
    */
   let isSharing = false;
   let shareChunkSize = 0;   // 0 means "send everything in one go"
+  let shareFailBytes = 0;   // bytes of the share that was refused; 0 = unknown, always use the chunk size
   let shareOffset = 0;
+
+  /* The slice size for the current batch: 0 when it is small enough to go in one go. */
+  function activeShareChunk() {
+    if (shareChunkSize <= 0) return 0;
+    if (shareFailBytes > 0) {
+      const total = processedFilesCache.reduce((acc, f) => acc + f.size, 0);
+      if (total < shareFailBytes) return 0;
+    }
+    return shareChunkSize;
+  }
+
+  function forgetShareChunk() {
+    shareChunkSize = 0;
+    shareFailBytes = 0;
+    try { localStorage.removeItem('qs_share_chunk'); localStorage.removeItem('qs_share_fail_bytes'); }
+    catch (e) { /* private mode */ }
+  }
 
   function shareSlice() {
     const all = processedFilesCache;
+    const size = activeShareChunk();
     if (shareOffset >= all.length) shareOffset = 0;
-    return shareChunkSize > 0 ? all.slice(shareOffset, shareOffset + shareChunkSize) : all.slice();
+    return size > 0 ? all.slice(shareOffset, shareOffset + size) : all.slice();
   }
 
   function updateShareButtonLabel() {
     const total = processedFilesCache.length;
-    if (shareChunkSize > 0 && total > shareChunkSize) {
+    const size = activeShareChunk();
+    if (size > 0 && total > size) {
       const from = shareOffset + 1;
-      const to = Math.min(shareOffset + shareChunkSize, total);
+      const to = Math.min(shareOffset + size, total);
       shareButton.textContent = `📤 Share ${from}–${to} of ${total}`;
     } else {
       shareButton.textContent = '📤 Share';
@@ -3241,12 +3602,8 @@
       await navigator.share({ files: chunk });
 
       shareOffset += chunk.length;
-      if (shareChunkSize > 0 && shareOffset < processedFilesCache.length) {
-        updateShareButtonLabel();
-      } else {
-        shareOffset = 0;
-        updateShareButtonLabel();
-      }
+      if (shareOffset >= processedFilesCache.length) shareOffset = 0;   // all sent: start over
+      updateShareButtonLabel();
     } catch (err) {
       const name = err && err.name;
       const message = err && err.message ? err.message : String(err);
@@ -3255,11 +3612,14 @@
         // The user backed out of the share sheet. Nothing to say.
       } else if (name === 'NotAllowedError' || /permission denied|not allowed/i.test(message)) {
         if (chunk.length > 1) {
-          shareChunkSize = shareChunkSize === 0
+          const current = activeShareChunk();
+          shareChunkSize = current === 0
             ? Math.max(1, Math.min(10, Math.ceil(chunk.length / 2)))
-            : Math.max(1, Math.floor(shareChunkSize / 2));
+            : Math.max(1, Math.floor(current / 2));
+          shareFailBytes = totalBytes;
           shareOffset = 0;
           store('qs_share_chunk', String(shareChunkSize));
+          store('qs_share_fail_bytes', String(shareFailBytes));
           updateShareButtonLabel();
           alert(`Could not take ${chunk.length} images at once.\n\nTap Share again to send them ${shareChunkSize} at a time, or download the ZIP.`);
         } else {
@@ -3276,14 +3636,60 @@
   /* ------------------------------------------------------------------ *
    * Photo editing: shared render code
    *
-   * cropDims, warpQuad, edUnitToQuad, edDrawImageInQuad, drawAnnotations and
-   * renderEdited are copied into the Web Workers as source text (see getWorkerUrl),
-   * so they may only use their own arguments: no outer variables and no DOM.
+   * encodeJpegLimited, cropDims, quadHomography, quadMapPoint, warpQuad, edUnitToQuad, edDrawImageInQuad,
+   * annoTextLayout, drawAnnotations and renderEdited are copied into the Web Workers as
+   * source text (see getWorkerUrl), so they may only use their own arguments, each other
+   * and the ANNO_* constants below (which getWorkerUrl copies too): no other outer
+   * variables and no DOM.
    *
    * An edit is { quad, annos }:
    *   quad  - four corners (TL, TR, BR, BL) in 0..1 of the source photo, or null
    *   annos - shapes in 0..1 of the cropped result
    * ------------------------------------------------------------------ */
+  /* Annotation sizes S, M, L, XL, XXL, relative to the shorter side of the picture. */
+  const ANNO_LW = [0.005, 0.009, 0.015, 0.022, 0.032];    // line widths
+  const ANNO_FS = [0.035, 0.055, 0.085, 0.115, 0.15];     // text sizes
+  const ANNO_FONT = '-apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+
+  /* Where a text annotation sits on a w x h picture: font size, width and its (clamped) centre. */
+  function annoTextLayout(ctx, a, w, h) {
+    const si = a.s >= 0 && a.s <= 4 ? a.s : 1;
+    const fs = Math.max(10, Math.min(w, h) * ANNO_FS[si]);
+    const font = 'bold ' + fs + 'px ' + ANNO_FONT;
+    ctx.save();
+    ctx.font = font;
+    const tw = ctx.measureText(a.text || '').width;
+    ctx.restore();
+    const pad = fs * 0.3;
+    const lo = tw / 2 + pad, hi = w - tw / 2 - pad;
+    const cx = lo > hi ? w / 2 : Math.max(lo, Math.min(hi, a.x * w));
+    const cy = Math.max(fs / 2, Math.min(h - fs / 2, a.y * h));
+    return { fs: fs, font: font, tw: tw, pad: pad, cx: cx, cy: cy };
+  }
+
+  /* Encodes a finished canvas as JPEG. The resolution is never changed here: it was already
+     set by "New resolution". With maxBytes > 0 this finds the highest quality between 92 % and
+     60 % that fits (binary search, ~1 % steps). If even 60 % is too big, the 60 % version is
+     kept and met is false (logged as "over the limit"). toBlob(canvas, quality) is supplied by
+     the caller, so the same code runs on the page and in the workers.
+     Returns { blob, quality, met }. */
+  async function encodeJpegLimited(canvas, quality, maxBytes, toBlob) {
+    if (!(maxBytes > 0)) return { blob: await toBlob(canvas, quality), quality: quality, met: true };
+    const Q_HI = 0.92, Q_LO = 0.6;
+    const top = await toBlob(canvas, Q_HI);
+    if (top.size <= maxBytes) return { blob: top, quality: Q_HI, met: true };
+    const low = await toBlob(canvas, Q_LO);
+    if (low.size > maxBytes) return { blob: low, quality: Q_LO, met: false };
+    let lo = Q_LO, hi = Q_HI, best = { blob: low, quality: Q_LO, met: true };
+    for (let k = 0; k < 5; k++) {
+      const mid = (lo + hi) / 2;
+      const b = await toBlob(canvas, mid);
+      if (b.size <= maxBytes) { best = { blob: b, quality: mid, met: true }; lo = mid; }
+      else hi = mid;
+    }
+    return best;
+  }
+
   function cropDims(w, h, edit) {
     if (!edit || !edit.quad) return { w: w, h: h };
     const q = edit.quad.map(function (p) { return { x: p.x * w, y: p.y * h }; });
@@ -3410,14 +3816,12 @@
      picture looks the same at any resolution. */
   function drawAnnotations(ctx, w, h, annos, base, makeCanvas) {   // base: the clean picture, needed by loupes
     const short = Math.min(w, h);
-    const LW = [0.005, 0.009, 0.015, 0.022, 0.032];      // S, M, L, XL, XXL
-    const FS = [0.035, 0.055, 0.085, 0.115, 0.15];
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     annos.forEach(function (a) {
       const si = a.s >= 0 && a.s <= 4 ? a.s : 1;
-      const lw = Math.max(2, short * LW[si]);
+      const lw = Math.max(2, short * ANNO_LW[si]);
       ctx.strokeStyle = a.c;
       ctx.fillStyle = a.c;
       ctx.lineWidth = lw;
@@ -3504,15 +3908,11 @@
           ctx.stroke();
         }
       } else if (a.t === 'text' && a.text) {
-        const fs = Math.max(10, short * FS[si]);
-        ctx.font = 'bold ' + fs + 'px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+        const L = annoTextLayout(ctx, a, w, h);
+        const fs = L.fs, tw = L.tw, pad = L.pad, tx = L.cx, ty = L.cy;
+        ctx.font = L.font;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const tw = ctx.measureText(a.text).width;
-        const pad = fs * 0.3;
-        const lo = tw / 2 + pad, hi = w - tw / 2 - pad;
-        const tx = lo > hi ? w / 2 : Math.max(lo, Math.min(hi, a.x * w));
-        const ty = Math.max(fs / 2, Math.min(h - fs / 2, a.y * h));
         const lum = parseInt(a.c.slice(1, 3), 16) * 0.299 + parseInt(a.c.slice(3, 5), 16) * 0.587 + parseInt(a.c.slice(5, 7), 16) * 0.114;
         if (Array.isArray(a.quad) && a.quad.length === 4) {
           const tw2 = Math.max(1, Math.ceil(tw + 2 * pad));
@@ -3602,7 +4002,7 @@
     fileObj.baseThumb = url;
     /* An original thumbnail can finish decoding after conversion; never let it
        overwrite the converted thumbnail currently shown in the grid. */
-    if (!fileObj.edit && !fileObj.outputFile && fileObj.img) fileObj.img.src = url;
+    if (!fileObj.edit && !fileObj.outputBlob && fileObj.img) fileObj.img.src = url;
   }
 
   /* ------------------------------------------------------------------ *
@@ -3633,7 +4033,7 @@
     const buffer = await fileObj.src.arrayBuffer();
     const { canvas, width, height } = await decodeHeicBufferToCanvas(buffer);
     const s = Math.min(1, PREVIEW_MAX / Math.max(width, height));
-    const out = paintToCanvas(canvas, Math.max(1, Math.round(width * s)), Math.max(1, Math.round(height * s)), true);
+    const out = paintToCanvas(canvas, Math.max(1, Math.round(width * s)), Math.max(1, Math.round(height * s)));
     canvas.width = 0; canvas.height = 0;
     const blob = await canvasToBlob(out, 'image/jpeg', 0.85);
     out.width = 0; out.height = 0;
@@ -3684,7 +4084,7 @@
     if (!fileObj.img) return;
     if (!on) {
       if (fileObj.editThumbUrl) { URL.revokeObjectURL(fileObj.editThumbUrl); fileObj.editThumbUrl = null; }
-	  if (fileObj.baseThumb) fileObj.img.src = fileObj.baseThumb;
+      if (fileObj.baseThumb) fileObj.img.src = fileObj.baseThumb;
       return;
     }
     try {
@@ -3834,9 +4234,8 @@
     const f = selectedFiles[V.index];
     if (!f) { closeViewer(); return; }
     const tok = ++V.token;
-    const convertedFile = isProcessed && f.outputFile ? f.outputFile : null;
+    const convertedFile = f.outputFile || null;
     const edited = !!exportEdit(f);
-    viewerEditBtn.hidden = isProcessed || conversionHasRun;
     const displayName = convertedFile ? convertedFile.name : f.name;
     const displaySize = convertedFile ? convertedFile.size : f.size;
     const previewNote = convertedFile ? ' · converted' : (edited ? ' · edited' : '');
@@ -3906,7 +4305,7 @@
   viewerPrev.addEventListener('click', () => viewerStep(-1));
   viewerNext.addEventListener('click', () => viewerStep(1));
   viewerEditBtn.addEventListener('click', () => {
-    if (isProcessed || conversionHasRun) return;
+    if (isBusy) return;                      // editing a converted photo just converts that one again
     const f = selectedFiles[V.index];
     if (f) openEditor(f);
   });
@@ -3947,7 +4346,8 @@
     tool: 'arrow', color: ED_COLORS[0], size: 1, loupeZoom: 2.5,
     baseCanvas: null, baseKey: '',
     rect: { x: 0, y: 0, w: 1, h: 1 }, cw: 1, ch: 1, dpr: 1,
-    drag: null, temp: null
+    drag: null, temp: null,
+    textEdit: null                              // state before the current text edit (one undo step)
   };
 
   /* Rotate a 0..1 point about the photo centre, measured in real pixels so shapes stay square. */
@@ -4051,7 +4451,7 @@
     return o;
   }
 
-  function edMakeShapePoly(a, w, h) {
+  function edMakeShapePoly(a) {
     const x1 = a.x1, x2 = a.x2, y1 = a.y1, y2 = a.y2;
     if (a.t === 'rect') {
       const l = Math.min(x1, x2), r = Math.max(x1, x2);
@@ -4073,19 +4473,10 @@
   }
 
   function edMakeTextQuad(a, w, h) {
-    const FS = [0.035, 0.055, 0.085, 0.115, 0.15];
-    const si = a.s >= 0 && a.s <= 4 ? a.s : 1;
-    const fs = Math.max(10, Math.min(w, h) * FS[si]);
     const mctx = ED.baseCanvas ? ED.baseCanvas.getContext('2d') : edCtx;
-    mctx.save();
-    mctx.font = 'bold ' + fs + 'px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
-    const tw = mctx.measureText(a.text || '').width;
-    mctx.restore();
-    const pad = fs * 0.3;
-    const lo = tw / 2 + pad, hi = w - tw / 2 - pad;
-    const cx = lo > hi ? w / 2 : Math.max(lo, Math.min(hi, a.x * w));
-    const cy = Math.max(fs / 2, Math.min(h - fs / 2, a.y * h));
-    const bw = tw + 2 * pad, bh = fs + 2 * pad;
+    const L = annoTextLayout(mctx, a, w, h);
+    const cx = L.cx, cy = L.cy;
+    const bw = L.tw + 2 * L.pad, bh = L.fs + 2 * L.pad;
     return [
       { x: (cx - bw / 2) / w, y: (cy - bh / 2) / h },
       { x: (cx + bw / 2) / w, y: (cy - bh / 2) / h },
@@ -4096,7 +4487,7 @@
 
   function edEnsureAnnoGeometry(a, w, h) {
     if ((a.t === 'rect' || a.t === 'ellipse') && !Array.isArray(a.poly)) {
-      a.poly = edMakeShapePoly(a, w, h);
+      a.poly = edMakeShapePoly(a);
     } else if (a.t === 'text' && !Array.isArray(a.quad) && a.text) {
       a.quad = edMakeTextQuad(a, w, h);
     }
@@ -4181,10 +4572,9 @@
     ctx.save();
     ctx.translate(r.x, r.y);
     drawAnnotations(ctx, r.w, r.h, list.filter(a => a.t !== 'loupe'), null, makeMainCanvas);
-    const LW = [0.005, 0.009, 0.015, 0.022, 0.032];   // keep in sync with drawAnnotations
     list.filter(a => a.t === 'loupe').forEach(a => {
       const si = a.s >= 0 && a.s <= 4 ? a.s : 1;
-      ctx.lineWidth = Math.max(2, Math.min(r.w, r.h) * LW[si]);
+      ctx.lineWidth = Math.max(2, Math.min(r.w, r.h) * ANNO_LW[si]);
       ctx.strokeStyle = a.c;
       ctx.beginPath();
       ctx.arc(a.x1 * r.w, a.y1 * r.h,
@@ -4482,7 +4872,6 @@
   const edUndoBtn = document.getElementById('edUndo');
   const edRedoBtn = document.getElementById('edRedo');
   const edClearBtn = document.getElementById('edClear');
-  const ANNO_FS = [0.035, 0.055, 0.085, 0.115, 0.15];     // text sizes: keep in sync with drawAnnotations
 
   function edCloneValue(value) {
     return JSON.parse(JSON.stringify(value));
@@ -4544,6 +4933,7 @@
   }
 
   function edStepHistory(from, to) {
+    edCommitTextEdit();
     edEnsureHistoryContext();
     if (!from.length) return;
     to.push(edCaptureAnnoState());
@@ -4608,16 +4998,8 @@
       return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
     }
     if (a.t === 'text') {
-      const si = a.s >= 0 && a.s <= 4 ? a.s : 1;
-      const fs = Math.max(10, Math.min(r.w, r.h) * ANNO_FS[si]);
-      edCtx.save();
-      edCtx.font = 'bold ' + fs + 'px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
-      const tw = edCtx.measureText(a.text || '').width;
-      edCtx.restore();
-      const pad = fs * 0.3, lo = tw / 2 + pad, hi = r.w - tw / 2 - pad;
-      const cx = lo > hi ? r.w / 2 : Math.max(lo, Math.min(hi, a.x * r.w));
-      const cy = Math.max(fs / 2, Math.min(r.h - fs / 2, a.y * r.h));
-      return { x: r.x + cx - tw / 2, y: r.y + cy - fs / 2, w: tw, h: fs };
+      const L = annoTextLayout(edCtx, a, r.w, r.h);
+      return { x: r.x + L.cx - L.tw / 2, y: r.y + L.cy - L.fs / 2, w: L.tw, h: L.fs };
     }
     const x1 = r.x + Math.min(a.x1, a.x2) * r.w, x2 = r.x + Math.max(a.x1, a.x2) * r.w;
     const y1 = r.y + Math.min(a.y1, a.y2) * r.h, y2 = r.y + Math.max(a.y1, a.y2) * r.h;
@@ -4816,6 +5198,7 @@
 
   edCanvas.addEventListener('pointerdown', (e) => {
     if (!ED.bmp) return;
+    edCommitTextEdit();
     try { edCanvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     const p = edPoint(e);
     if (ED.tab === 'crop') { edCropDown(p); edRender(); } else edAnnoDown(p);   // render: shows the loupe at once
@@ -5134,6 +5517,7 @@
 
   /* Annotation tools */
   function edSetTool(tool) {
+    edCommitTextEdit();
     ED.tool = tool;
     document.querySelectorAll('#edToolsAnno [data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
     if (tool !== 'text') ED.temp = null;
@@ -5154,6 +5538,7 @@
     b.style.background = color;
     b.setAttribute('aria-label', 'Colour ' + color);
     b.addEventListener('click', () => {
+      edCommitTextEdit();
       const selected = ED.annos[ED.sel];
       const before = selected ? edCaptureAnnoState() : null;
       ED.color = color;
@@ -5177,15 +5562,12 @@
   function edTextMeasure(text, sizeIndex) {
     const w = ED.baseCanvas ? ED.baseCanvas.width : Math.max(1, ED.rect.w);
     const h = ED.baseCanvas ? ED.baseCanvas.height : Math.max(1, ED.rect.h);
-    const fs = Math.max(10, Math.min(w, h) * ANNO_FS[sizeIndex >= 0 && sizeIndex < 5 ? sizeIndex : 1]);
-    edCtx.save();
-    edCtx.font = 'bold ' + fs + 'px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
-    const width = edCtx.measureText(text || '').width;
-    edCtx.restore();
-    return { fs: fs, width: width };
+    const L = annoTextLayout(edCtx, { text: text, s: sizeIndex, x: 0.5, y: 0.5 }, w, h);
+    return { fs: L.fs, width: L.tw };
   }
 
   edSizeBtn.addEventListener('click', () => {
+    edCommitTextEdit();
     const nextSize = (ED.size + 1) % ED_SIZE_NAMES.length;
     const a = ED.annos[ED.sel];
     const before = a ? edCaptureAnnoState() : null;
@@ -5208,6 +5590,7 @@
   edRedoBtn.addEventListener('click', () => edStepHistory(ED.redo, ED.undo));
 
   edClearBtn.addEventListener('click', () => {
+    edCommitTextEdit();
     if (!edAnnoCount()) return;
     if (!confirm('Remove all annotations?')) return;
     const before = edCaptureAnnoState();
@@ -5222,6 +5605,7 @@
   });
 
   edDeleteBtn.addEventListener('click', () => {
+    edCommitTextEdit();
     if (!ED.annos[ED.sel]) return;
     const before = edCaptureAnnoState();
     ED.annos.splice(ED.sel, 1);
@@ -5245,25 +5629,34 @@
   });
 
   edTextInput.value = read('qs_last_text') || '';     // remembered between photos and visits
+  /* Editing a selected text is one undo step: the state from before the first keystroke is
+     kept in ED.textEdit and recorded once typing ends (blur, Enter, or any other action). */
+  function edCommitTextEdit() {
+    const before = ED.textEdit;
+    if (!before) return;
+    ED.textEdit = null;
+    edRecordAnnoChange(before);
+  }
+
   edTextInput.addEventListener('input', () => {
     const a = ED.annos[ED.sel];
     if (ED.tool === 'move' && a && a.t === 'text') {      // editing the selected text
       const t = edTextInput.value.trim();
       if (t) {
-        const before = edCaptureAnnoState();
+        if (!ED.textEdit) ED.textEdit = edCaptureAnnoState();
         if (Array.isArray(a.quad)) {
-          const before = edTextMeasure(a.text, a.s).width;
-          const after = edTextMeasure(t, a.s).width;
-          if (before > 0) edScaleTextQuad(a, after / before, 1);
+          const oldWidth = edTextMeasure(a.text, a.s).width;
+          const newWidth = edTextMeasure(t, a.s).width;
+          if (oldWidth > 0) edScaleTextQuad(a, newWidth / oldWidth, 1);
         }
         a.text = t;
-        edRecordAnnoChange(before);
         edRender();
       }                                                   // an empty box keeps the old text
     } else {
       store('qs_last_text', edTextInput.value);            // text for the next one
     }
   });
+  edTextInput.addEventListener('blur', edCommitTextEdit);
   edTextInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {                     // done typing: the text stays selected in Move mode
       e.preventDefault();
@@ -5290,11 +5683,11 @@
     if (max > 0) edToolsWrap.style.height = max + 'px';
   }
 
-  /* Annotations belong to one particular crop. */
   /* Annotations follow the photo, so changing the crop never removes them. */
 
   function edSwitchTab(tab) {
     if (tab === ED.tab || !ED.bmp) return;
+    edCommitTextEdit();
     if (tab === 'anno') {
       edEnsureHistoryContext();
       edBuildBase();
@@ -5335,6 +5728,7 @@
     ED.undo = [];
     ED.redo = [];
     ED.historyKey = '';
+    ED.textEdit = null;
     editorEl.hidden = false;
     edSetTabUI();
     edSetTool('arrow');
@@ -5389,7 +5783,7 @@
     const f = ED.file;
     ED.file = null;
     if (applied && f) {
-      invalidateProcessedCache();
+      invalidateFile(f);                    // only this photo needs converting again
       refreshThumb(f);
       if (!viewerEl.hidden) showViewerImage();
     }
@@ -5399,6 +5793,7 @@
 
   document.getElementById('edDone').addEventListener('click', () => {
     if (!ED.bmp || !ED.file) return;
+    ED.textEdit = null;                       // the edit is being applied; its undo history is discarded
     if (ED.tab === 'anno') { edAnnosStore(); }
     const quad = (edIsFull() && !ED.rot) ? null : edQuad().map(p => edToSrc(p, ED.rot));
     const annos = edAnnosToCrop(ED.annosP, edQuad());      // crop space, for the converter
@@ -5492,6 +5887,61 @@
   });
 
   /* ------------------------------------------------------------------ *
+   * Paste: Ctrl/⌘+V adds images from the clipboard (screenshots, copied pictures)
+   * ------------------------------------------------------------------ */
+  document.addEventListener('paste', (e) => {
+    if (isBusy || !editorEl.hidden) return;              // the editor's text box pastes text as usual
+    const files = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(looksLikeImage);
+    if (!files.length) return;                           // plain text: leave it to the focused field
+    e.preventDefault();
+    const now = new Date();
+    const stamp = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2, '0')).join('');
+    // Clipboard images are usually all called "image.png"; give them a readable, distinct name.
+    const named = files.map((f, i) => /^image\.\w+$/i.test(f.name) || !f.name
+      ? new File([f], `Pasted_${stamp}${files.length > 1 ? '_' + (i + 1) : ''}.${(f.type.split('/')[1] || 'png').split('+')[0]}`,
+          { type: f.type, lastModified: now.getTime() })
+      : f);
+    addFiles(named);
+  });
+
+  /* ------------------------------------------------------------------ *
+   * Share target (installed app on Android): photos shared to IMAGE2JPG from another
+   * app are posted to ./share-target. The service worker keeps them in the
+   * SHARE_CACHE cache and opens the page with ?shared=1; they are picked up here.
+   * ------------------------------------------------------------------ */
+  const SHARE_CACHE = 'IMAGE2JPG-share';
+
+  async function loadSharedFiles() {
+    const params = new URLSearchParams(location.search);
+    if (!params.has('shared')) return;
+    history.replaceState(null, '', location.pathname);   // a reload must not add them again
+    if (!('caches' in window)) return;
+    try {
+      const cache = await caches.open(SHARE_CACHE);
+      const keys = await cache.keys();
+      const index = (req) => parseInt(req.url.split('/').pop(), 10) || 0;
+      keys.sort((a, b) => index(a) - index(b));
+      const files = [];
+      for (const key of keys) {
+        const res = await cache.match(key);
+        if (!res) continue;
+        const blob = await res.blob();
+        let name = 'shared';
+        try { name = decodeURIComponent(res.headers.get('X-File-Name') || '') || `shared_${files.length + 1}`; }
+        catch (err) { name = `shared_${files.length + 1}`; }
+        files.push(new File([blob], name, {
+          type: blob.type || res.headers.get('Content-Type') || '',
+          lastModified: parseInt(res.headers.get('X-Last-Modified'), 10) || Date.now()
+        }));
+      }
+      await caches.delete(SHARE_CACHE);
+      if (files.length) await addFiles(files);
+    } catch (err) {
+      console.warn('Could not load the shared photos', err);
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
    * Settings sheet
    * ------------------------------------------------------------------ */
   function openSettings() {
@@ -5514,31 +5964,40 @@
     finally { fileInput.value = ''; }         // lets the same file be picked again
   });
 
-  sizeSelect.addEventListener('change', applySizeChoice);
-  qualitySelect.addEventListener('change', applyQualityChoice);
+  sizeSelect.addEventListener('change', () => applySizeChoice(true));
+  qualitySelect.addEventListener('change', () => applyQualityChoice(true));
 
   themeSettingBtn.addEventListener('click', cycleTheme);
   logBtn.addEventListener('click', openConversionLog);
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
-  document.getElementById('refreshBtn').addEventListener('click', resetApp);
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    forgetShareChunk();                       // a fresh start also retries sharing everything at once
+    resetApp();
+  });
   document.getElementById('sheetCloseBtn').addEventListener('click', closeSettings);
   document.getElementById('sheetDoneBtn').addEventListener('click', closeSettings);
   document.getElementById('sheetBackdrop').addEventListener('click', closeSettings);
   document.getElementById('sheetResetBtn').addEventListener('click', () => {
+    const exifWas = naming.stripExif;
     naming = Object.assign({}, DEFAULT_NAMING);
     store('qs_naming', naming);
     writeNamingToForm();
-    invalidateProcessedCache();
+    if (naming.stripExif !== exifWas) invalidateProcessedCache();
+    else outputsChanged();
   });
 
   ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setUseQuality', 'setStripExif', 'setSep']
     .forEach(id => {
       const el = document.getElementById(id);
-      el.addEventListener('input', readNamingFromForm);
-      el.addEventListener('change', readNamingFromForm);
+      // Text boxes update as you type; checkboxes report once, on change.
+      el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', readNamingFromForm);
     });
+  // An empty separator means "_": show that in the box once you leave it.
+  document.getElementById('setSep').addEventListener('blur', (e) => {
+    if (!e.target.value.trim()) e.target.value = naming.sep;
+  });
 
-  actionButton.addEventListener('click', () => { if (!isProcessed) processAllImages(); });
+  actionButton.addEventListener('click', processAllImages);
   zipButton.addEventListener('click', downloadAllZip);
   shareButton.addEventListener('click', shareNow);
 
@@ -5583,12 +6042,14 @@
 
     const savedChunk = parseInt(read('qs_share_chunk'), 10);
     if (isFinite(savedChunk) && savedChunk > 0) shareChunkSize = savedChunk;
+    const savedFailBytes = parseInt(read('qs_share_fail_bytes'), 10);
+    if (isFinite(savedFailBytes) && savedFailBytes > 0) shareFailBytes = savedFailBytes;
 
     loadNaming();
     resetApp();
 
     if (isFinePointer) {
-      dropZoneText.textContent = 'SELECT OR DROP IMAGES HERE';
+      dropZoneText.textContent = 'SELECT, DROP OR PASTE IMAGES';
       emptyState.innerHTML = 'NO IMAGES YET';
     } else {
       emptyState.textContent = 'No images selected yet';
@@ -5596,8 +6057,7 @@
 
     // No share sheet on this device, so give the whole bar to the ZIP download.
     if (!canShareFiles()) {
-      shareButton.hidden = true;
-      shareButton.style.display = 'none';
+      shareButton.style.display = 'none';   // inline style: .btn-action's display:flex would beat [hidden]
       dualActionContainer.classList.add('single-action');
       zipButton.classList.remove('btn-secondary');
       zipButton.classList.add('ready-state');
@@ -5610,6 +6070,8 @@
         });
       });
     }
+
+    loadSharedFiles();                      // photos shared into the installed app, if any
   }
 
   boot();
