@@ -617,6 +617,9 @@
 
     .setting-control { flex: 0 0 150px; }
     .setting-control.narrow { flex: 0 0 84px; }
+    .setting-control.mid { flex: 0 0 128px; }
+    .setting-control .select { height: 40px; font-size: 14px; border-radius: 8px; background-color: var(--field-bg); padding: 0 28px 0 10px; background-position: right 10px center; }
+    .setting-control .select:disabled { opacity: 0.45; cursor: not-allowed; }
 
     input[type="checkbox"] {
       width: 22px;
@@ -1060,7 +1063,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.6</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.7</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1199,9 +1202,22 @@
       <div class="setting-row">
         <div>
           <div class="setting-label">Add date</div>
-          <div class="setting-desc">The date the photo was taken; the file's date when that is unknown</div>
+          <div class="setting-desc">Adds a date such as 2026_Nov_04 to every name</div>
         </div>
         <input type="checkbox" id="setUseDate">
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Which date</div>
+          <div class="setting-desc">Today: the same on every file. Date taken: each photo's own (or its file date)</div>
+        </div>
+        <div class="setting-control mid">
+          <select class="select" id="setDateSource">
+            <option value="today">Today</option>
+            <option value="taken">Date taken</option>
+          </select>
+        </div>
       </div>
 
       <div class="setting-row">
@@ -1376,6 +1392,7 @@
     suffix: '',
     keepName: false,
     useDate: false,
+    dateSource: 'today',             // 'today': one date for the whole batch; 'taken': each photo's date
     useQuality: false,
     stripExif: true,
     sep: '_'
@@ -1610,6 +1627,8 @@
     document.getElementById('setSuffix').value = naming.suffix;
     document.getElementById('setKeepName').checked = naming.keepName;
     document.getElementById('setUseDate').checked = naming.useDate;
+    document.getElementById('setDateSource').value = naming.dateSource === 'taken' ? 'taken' : 'today';
+    document.getElementById('setDateSource').disabled = !naming.useDate;
     document.getElementById('setUseQuality').checked = naming.useQuality;
     document.getElementById('setStripExif').checked = naming.stripExif;
     document.getElementById('setSep').value = naming.sep;
@@ -1623,11 +1642,13 @@
       suffix: document.getElementById('setSuffix').value.trim(),
       keepName: document.getElementById('setKeepName').checked,
       useDate: document.getElementById('setUseDate').checked,
+      dateSource: document.getElementById('setDateSource').value === 'taken' ? 'taken' : 'today',
       useQuality: document.getElementById('setUseQuality').checked,
       stripExif: document.getElementById('setStripExif').checked,
       sep: document.getElementById('setSep').value.trim() ? document.getElementById('setSep').value : '_'
     };
     store('qs_naming', naming);
+    document.getElementById('setDateSource').disabled = !naming.useDate;
     updateNamePreview();
     // EXIF changes the file contents, so everything is converted again. Names alone do not:
     // converted photos are just renamed.
@@ -1643,6 +1664,12 @@
     const d = new Date(ms || Date.now());
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${d.getFullYear()}_${months[d.getMonth()]}_${String(d.getDate()).padStart(2, '0')}`;   // 2026_Oct_31
+  }
+
+  /* The date used in a file name: today (the same for every file) or the photo's own date
+     (date taken, falling back to the file's date; see readDateTaken). */
+  function nameDate(fileObj, today) {
+    return naming.dateSource === 'taken' ? fileObj.dateMs : (today || Date.now());
   }
 
   function qualityTag() {
@@ -1687,8 +1714,8 @@
     const a = selectedFiles[0], b = selectedFiles[1] || a;
     const baseA = a ? stripExt(a.name) : 'photo';
     const baseB = b ? stripExt(b.name) : 'sunset';
-    const whenA = a ? a.dateMs : Date.now();
-    const whenB = b ? b.dateMs : Date.now();
+    const whenA = a ? nameDate(a) : Date.now();
+    const whenB = b ? nameDate(b) : Date.now();
     const total = Math.max(n, 2);                      // with no photos yet, show a batch of two
     const first = buildFileName(baseA, whenA, 0, 'jpg', n === 1 ? 1 : total);
     namePreview.innerHTML = n === 1
@@ -2475,10 +2502,11 @@
   function rebuildOutputs() {
     const used = new Set();
     const total = selectedFiles.length;
+    const today = Date.now();                       // one "today" for the whole list
     processedFilesCache = [];
     selectedFiles.forEach((f, i) => {
       if (!f.outputBlob) { f.outputFile = null; return; }
-      const name = makeUnique(buildFileName(stripExt(f.name), f.dateMs, i, OUTPUT_EXT, total), used);
+      const name = makeUnique(buildFileName(stripExt(f.name), nameDate(f, today), i, OUTPUT_EXT, total), used);
       if (!f.outputFile || f.outputFile.name !== name || f.outputFileBlob !== f.outputBlob) {
         f.outputFile = new File([f.outputBlob], name, { type: OUTPUT_MIME });
         f.outputFileBlob = f.outputBlob;
@@ -5986,11 +6014,11 @@
     else outputsChanged();
   });
 
-  ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setUseQuality', 'setStripExif', 'setSep']
+  ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setDateSource', 'setUseQuality', 'setStripExif', 'setSep']
     .forEach(id => {
       const el = document.getElementById(id);
       // Text boxes update as you type; checkboxes report once, on change.
-      el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', readNamingFromForm);
+      el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', readNamingFromForm);
     });
   // An empty separator means "_": show that in the box once you leave it.
   document.getElementById('setSep').addEventListener('blur', (e) => {
