@@ -1,5 +1,8 @@
 /* IMAGE2JPG service worker: offline app shell */
-const VERSION = 'IMAGE2JPG-v1.8.3';
+const VERSION = 'IMAGE2JPG-v1.8.5';
+// Photos shared into the app wait here until the page picks them up (see loadSharedFiles).
+const SHARE_CACHE = 'IMAGE2JPG-share';
+const SHARE_MAX_FILES = 200;
 
 const CORE = [
   './',
@@ -40,13 +43,42 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== VERSION && k !== SHARE_CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+
+  // Share target (see manifest "share_target"): keep the shared images, then open the app.
+  // Only image files are kept, at most SHARE_MAX_FILES; nothing else in the request is used.
+  if (req.method === 'POST' && new URL(req.url).pathname.endsWith('/share-target')) {
+    event.respondWith((async () => {
+      try {
+        const form = await req.formData();
+        const files = form.getAll('images')
+          .filter((f) => f && typeof f === 'object' && typeof f.size === 'number' && f.size > 0)
+          .filter((f) => !f.type || f.type.startsWith('image/') || /\.(heic|heif|hif)$/i.test(f.name || ''))
+          .slice(0, SHARE_MAX_FILES);
+        await caches.delete(SHARE_CACHE);
+        const cache = await caches.open(SHARE_CACHE);
+        await Promise.all(files.map((f, i) => cache.put(
+          new Request(`./shared/${i}`),
+          new Response(f, { headers: {
+            'Content-Type': f.type || 'application/octet-stream',
+            'X-File-Name': encodeURIComponent(f.name || `shared_${i + 1}`),
+            'X-Last-Modified': String(f.lastModified || Date.now())
+          } })
+        )));
+      } catch (e) {
+        console.warn('SW: could not keep the shared files', e);
+      }
+      return Response.redirect(new URL('./?shared=1', self.registration.scope).href, 303);
+    })());
+    return;
+  }
+
   if (req.method !== 'GET') return;
 
   // Navigations: network first so updates land, fall back to the cached shell.
