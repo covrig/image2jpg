@@ -508,6 +508,46 @@
     }
     .progress-error[hidden] { display: none; }
 
+    /* ---- "Retry N failed": a slim button under ZIP / SHARE, only when some photos failed ---- */
+    .btn-retry-failed {
+      width: 100%;
+      margin-top: 8px;
+      padding: 9px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-sub);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-retry-failed:active { background: var(--secondary-bg); }
+    .btn-retry-failed[hidden] { display: none; }
+
+    /* ---- Short notice (e.g. "Names updated") ---- */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(96px + env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(8px);
+      z-index: 1700;
+      max-width: min(92vw, 460px);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
     /* ---- Full-window drop overlay (desktop) ---- */
     #dropOverlay {
       display: none;
@@ -1063,7 +1103,7 @@
 
   <div class="header">
     <div>
-      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.7</span></h1>
+      <h1>IMAGE<span style="color: orangered;">2</span>JPG <span style="font-size: 60%;">1.8.8</span></h1>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="installBtn" hidden title="Install this app">⤓</button>
@@ -1144,11 +1184,14 @@
         📤 SHARE
       </button>
     </div>
+    <button class="btn-retry-failed" id="retryFailedButton" type="button" hidden>↻ Retry failed</button>
   </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <div id="loader">
     <div class="loader-box">
-      <div id="loaderText">Resizing images…</div>
+      <div id="loaderText">Processing images…</div>
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
       <div id="progressLabel">0% complete — 0 of 0 images</div>
       <div id="progressError" class="progress-error" role="status" aria-live="polite" hidden></div>
@@ -1259,7 +1302,7 @@
     </div>
   </div>
 
-  <!-- Scrollable conversion and resize log, including successful files and errors -->
+  <!-- Scrollable conversion log, including successful files and errors -->
   <div class="error-dialog" id="conversionLogDialog" hidden>
     <div class="error-dialog-backdrop" id="conversionLogBackdrop"></div>
     <section class="error-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="conversionLogTitle">
@@ -1378,7 +1421,7 @@
   let totalOriginalSize = 0;
   let fileIdSeq = 0;
   let isBusy = false;
-  let pendingAdds = 0;             // addFiles calls still reading files; no resize / ZIP until they finish
+  let pendingAdds = 0;             // addFiles calls still reading files; no processing / ZIP until they finish
   let conversionLogEntries = [];
   let conversionLogHasErrors = false;
   let conversionLogHasWarnings = false;
@@ -1418,6 +1461,7 @@
   const dualActionContainer = document.getElementById('dualActionContainer');
   const zipButton = document.getElementById('zipButton');
   const shareButton = document.getElementById('shareButton');
+  const retryFailedButton = document.getElementById('retryFailedButton');
   const loader = document.getElementById('loader');
   const loaderText = document.getElementById('loaderText');
   const progressFill = document.getElementById('progressFill');
@@ -1653,7 +1697,37 @@
     // EXIF changes the file contents, so everything is converted again. Names alone do not:
     // converted photos are just renamed.
     if (naming.stripExif !== exifWas) invalidateProcessedCache();
-    else outputsChanged();
+    else renameOutputs();
+  }
+
+  /* Name-only settings changed: converted photos keep their JPEG data and are renamed at once.
+     A notice (and one log entry per pause in typing) shows that it happened. */
+  let renameFrom = null, renameTimer = 0;
+  function renameOutputs() {
+    if (renameFrom === null && processedFilesCache.length) renameFrom = processedFilesCache[0].name;
+    outputsChanged();
+    if (renameFrom === null) return;                 // nothing converted yet: only the preview changes
+    clearTimeout(renameTimer);
+    renameTimer = setTimeout(() => {
+      const n = processedFilesCache.length;
+      const to = n ? processedFilesCache[0].name : '';
+      if (n && to !== renameFrom) {
+        const more = n > 1 ? ` (and ${n - 1} more)` : '';
+        showToast(`Names updated: ${to}${more}`);
+        addConversionLogEntry('info', 'Names updated',
+          `${n} converted image${n === 1 ? '' : 's'} renamed with the new settings, e.g. ${renameFrom} → ${to}. No re-processing was needed.`);
+      }
+      renameFrom = null;
+    }, 700);
+  }
+
+  let toastTimer = 0;
+  function showToast(text) {
+    const el = document.getElementById('toast');
+    el.textContent = text;
+    el.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('visible'), 2600);
   }
 
   function sanitizeNamePart(str) {
@@ -2244,7 +2318,7 @@
     }
   }
 
-  /* While files are still being read, RESIZE / ZIP stay blocked, so a run can never start with
+  /* While files are still being read, PROCESS / ZIP stay blocked, so a run can never start with
      part of the batch and then have the rest (and an invalidation) land in the middle of it. */
   async function addFiles(fileList) {
     if (isBusy) return;
@@ -2517,7 +2591,7 @@
   }
 
   /* Which button(s) to show:
-     - photos not converted yet (new, edited, or nothing done) -> RESIZE / UPDATE N
+     - photos not converted yet (new, edited, or nothing done) -> PROCESS N / PROCESS N MORE
      - only failed photos left, and nothing converted          -> RETRY N
      - otherwise                                               -> ZIP / SHARE (failed ones left out) */
   function updateActionUI() {
@@ -2529,6 +2603,7 @@
     if (n === 0) {
       singleActionContainer.style.display = 'block';
       dualActionContainer.style.display = 'none';
+      retryFailedButton.hidden = true;
       actionButton.disabled = true;
       actionButton.textContent = 'SELECT IMAGES FIRST';
       updateSizeStats(0);
@@ -2539,12 +2614,16 @@
       singleActionContainer.style.display = 'block';
       dualActionContainer.style.display = 'none';
       actionButton.disabled = pendingAdds > 0;
-      actionButton.textContent = !done.length ? (untried.length ? `RESIZE ${word}` : `RETRY ${word}`) : `UPDATE ${word}`;
+      actionButton.textContent = !done.length ? (untried.length ? `PROCESS ${word}` : `RETRY ${word}`) : `PROCESS ${todo.length} MORE IMAGE${todo.length === 1 ? '' : 'S'}`;
     } else {
       singleActionContainer.style.display = 'none';
       dualActionContainer.style.display = 'grid';
       updateShareButtonLabel();
     }
+    // ZIP / SHARE leave failed photos out; this lets you try just those again.
+    const failedCount = todo.length;                 // with ZIP / SHARE showing, every unconverted photo has failed
+    retryFailedButton.hidden = !(dualActionContainer.style.display === 'grid' && failedCount > 0);
+    if (!retryFailedButton.hidden) retryFailedButton.textContent = `↻ Retry ${failedCount} failed`;
     if (done.length) {
       updateSizeStats(done.reduce((acc, f) => acc + f.size, 0), done.reduce((acc, f) => acc + f.outputBlob.size, 0));
     } else {
@@ -3129,10 +3208,10 @@
       logBtn.classList.add('has-warnings');
       logBtn.title = 'Warnings (a damaged JPEG, or a photo over the size limit) — open the log';
     } else if (conversionLogInProgress) {
-      logBtn.title = 'Resize in progress — conversion log';
+      logBtn.title = 'Processing — conversion log';
     } else {
       logBtn.classList.add('all-good');
-      logBtn.title = 'Resize completed successfully — open the log';
+      logBtn.title = 'Processing completed successfully — open the log';
     }
   }
 
@@ -3171,7 +3250,7 @@
     const patched = conversionLogEntries.filter(entry => entry.type === 'warning' && entry.patched).length;
 
     if (!conversionLogHasRun) {
-      conversionLogSummary.textContent = 'No conversion or resize run has been recorded yet.';
+      conversionLogSummary.textContent = 'Nothing has been processed yet.';
     } else {
       const total = conversionLogBatchTotal;
       const parts = [`${successes} of ${total} converted`, `${errors} ${errors === 1 ? 'error' : 'errors'}`];
@@ -3266,7 +3345,7 @@
       addConversionLogEntry('warning', fileObj.name, message, selectedFiles.indexOf(fileObj), { patched: !!fileObj.patchedOnLoad });
     });
 
-    showProgress(kept > 0 ? `Resizing ${total} more image${total === 1 ? '' : 's'}…` : 'Resizing images…');
+    showProgress(kept > 0 ? `Processing ${total} more image${total === 1 ? '' : 's'}…` : 'Processing images…');
     setProgress(0, total);
     await nextFrame();
 
@@ -3392,10 +3471,10 @@
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
       conversionLogInProgress = false;
-      addConversionLogEntry('error', 'Resize operation aborted', message);
+      addConversionLogEntry('error', 'Processing stopped', message);
       jobs.forEach(f => { if (!f.outputBlob) f.failed = true; });
       outputsChanged();
-      showProgressError('Resize stopped because of an error. Open LOG for details.');
+      showProgressError('Processing stopped because of an error. Open LOG for details.');
       await nextFrame();
       await new Promise(resolve => setTimeout(resolve, 900));
       hideProgress();
@@ -6011,7 +6090,7 @@
     store('qs_naming', naming);
     writeNamingToForm();
     if (naming.stripExif !== exifWas) invalidateProcessedCache();
-    else outputsChanged();
+    else renameOutputs();
   });
 
   ['setPrefix', 'setSuffix', 'setKeepName', 'setUseDate', 'setDateSource', 'setUseQuality', 'setStripExif', 'setSep']
@@ -6028,6 +6107,8 @@
   actionButton.addEventListener('click', processAllImages);
   zipButton.addEventListener('click', downloadAllZip);
   shareButton.addEventListener('click', shareNow);
+  // Only the photos without a result (the failed ones) are processed; the rest are kept.
+  retryFailedButton.addEventListener('click', processAllImages);
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
