@@ -1,5 +1,5 @@
 /* IMAGE2JPG service worker: offline app shell */
-const VERSION = 'IMAGE2JPG-v1.8.9';
+const VERSION = 'IMAGE2JPG-v1.9.0';
 // Photos shared into the app wait here until the page picks them up (see loadSharedFiles).
 const SHARE_CACHE = 'IMAGE2JPG-share';
 const SHARE_MAX_FILES = 200;
